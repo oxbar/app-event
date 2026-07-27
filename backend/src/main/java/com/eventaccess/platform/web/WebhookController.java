@@ -16,10 +16,13 @@ public class WebhookController {
     }
 
     @PostMapping("/{provider}")
-    ResponseEntity<Void> webhook(@PathVariable String provider,
-                                 @RequestHeader(value = "X-Fake-Signature", required = false) String signature,
-                                 @RequestBody Map<String, Object> payload) {
+    ResponseEntity<Map<String, Boolean>> webhook(
+            @PathVariable String provider,
+            @RequestHeader(value = "asaas-access-token", required = false) String asaasToken,
+            @RequestHeader(value = "X-Fake-Signature", required = false) String fakeSignature,
+            @RequestBody Map<String, Object> payload) {
+        String signature = "ASAAS".equalsIgnoreCase(provider) ? asaasToken : fakeSignature;
         service.process(provider, signature, payload);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(Map.of("received", true));
     }
 }

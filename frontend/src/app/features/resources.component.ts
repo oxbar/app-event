@@ -4,7 +4,7 @@ import {ActivatedRoute} from '@angular/router';
 import {TuiButton, TuiLoader} from '@taiga-ui/core';
 import {TuiPagination} from '@taiga-ui/kit';
 import {apiErrorMessage} from '../core/api-error';
-import {AdminApi, AdminKind} from '../core/api.services';
+import {AdminApi, AdminKind, CheckoutApi} from '../core/api.services';
 import {AdminRow} from '../core/models';
 import {DisplayLabelPipe} from '../shared/display-label.pipe';
 
@@ -60,6 +60,11 @@ import {DisplayLabelPipe} from '../shared/display-label.pipe';
               @if (kind === 'tickets' && row.status === 'BLOCKED') {
                 <button tuiButton size="s" type="button" (click)="unblock(row.id)">Desbloquear</button>
               }
+              @if (kind === 'payments' && row.status === 'PENDING') {
+                <button tuiButton size="s" appearance="secondary" type="button" [disabled]="actionLoading()" (click)="synchronizePayment(row.id)">
+                  Sincronizar
+                </button>
+              }
             </div>
           </article>
         } @empty {
@@ -80,12 +85,14 @@ import {DisplayLabelPipe} from '../shared/display-label.pipe';
 export class ResourcesComponent {
   private readonly api = inject(AdminApi);
   private readonly route = inject(ActivatedRoute);
+  private readonly checkout = inject(CheckoutApi);
   readonly kind = this.route.snapshot.data['kind'] as AdminKind;
   readonly rows = signal<AdminRow[]>([]);
   readonly loading = signal(true);
   readonly error = signal('');
   readonly totalPages = signal(0);
   readonly title = signal(this.route.snapshot.data['title'] as string);
+  readonly actionLoading = signal(false);
   pageIndex = 0;
 
   constructor() {
@@ -129,6 +136,21 @@ export class ResourcesComponent {
     this.api.unblockTicket(id).subscribe({
       next: () => this.load(this.pageIndex),
       error: error => this.error.set(apiErrorMessage(error, 'Não foi possível desbloquear o ingresso.')),
+    });
+  }
+
+  synchronizePayment(id: string): void {
+    this.actionLoading.set(true);
+    this.error.set('');
+    this.checkout.synchronizePayment(id).subscribe({
+      next: () => {
+        this.actionLoading.set(false);
+        this.load(this.pageIndex);
+      },
+      error: error => {
+        this.actionLoading.set(false);
+        this.error.set(apiErrorMessage(error, 'Não foi possível sincronizar o pagamento com o provedor.'));
+      },
     });
   }
 

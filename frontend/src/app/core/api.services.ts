@@ -79,8 +79,12 @@ export class CheckoutApi {
     return this.http.get<Ticket>(`/api/public/tickets/${encodeURIComponent(token)}`);
   }
 
-  approve(id: string) {
+  approveFake(id: string) {
     return this.http.post<Order>(`/api/dev/payments/${id}/approve`, {});
+  }
+
+  synchronizePayment(id: string) {
+    return this.http.post<Order>(`/api/dev/payments/${id}/synchronize`, {});
   }
 }
 

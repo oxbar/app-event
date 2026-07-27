@@ -1,9 +1,11 @@
 import {CurrencyPipe} from '@angular/common';
-import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, DestroyRef, inject, signal} from '@angular/core';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {TuiButton, TuiLoader} from '@taiga-ui/core';
 import {DashboardApi} from '../core/api.services';
 import {apiErrorMessage} from '../core/api-error';
 import {DashboardSummary} from '../core/models';
+import {interval} from 'rxjs';
 
 @Component({
   standalone: true,
@@ -46,16 +48,18 @@ import {DashboardSummary} from '../core/models';
 })
 export class DashboardComponent {
   private readonly api = inject(DashboardApi);
+  private readonly destroyRef = inject(DestroyRef);
   readonly summary = signal<DashboardSummary | null>(null);
   readonly loading = signal(true);
   readonly error = signal('');
 
   constructor() {
     this.load();
+    interval(15000).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.load(true));
   }
 
-  load(): void {
-    this.loading.set(true);
+  load(silent = false): void {
+    if (!silent) this.loading.set(true);
     this.error.set('');
     this.api.summary().subscribe({
       next: summary => {

@@ -77,6 +77,8 @@ export interface Payment {
   pixCopyPaste: string;
   pixQrCodeUrl: string;
   expiresAt: string;
+  invoiceUrl?: string;
+  sandbox?: boolean;
 }
 
 export interface Ticket {

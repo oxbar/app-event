@@ -150,21 +150,37 @@ public class CheckoutService {
         if (existing.isPresent() && existing.get().getStatus() == PaymentStatus.PENDING) {
             return PaymentView.from(existing.get());
         }
-        PaymentProvider.PixPayment created = provider.createPixPayment(
-                order.getPublicCode(), order.getTotalAmount(), order.getExpiresAt());
+        Attendee buyer = order.getBuyer();
+        String providerCustomerId = provider.name().equalsIgnoreCase(buyer.getPaymentProvider())
+                ? buyer.getProviderCustomerId() : null;
+        PaymentProvider.PixPayment created = provider.createPixPayment(new PaymentProvider.PixRequest(
+                order.getPublicCode(),
+                order.getEvent().getName() + " — pedido " + order.getPublicCode(),
+                order.getTotalAmount(),
+                order.getExpiresAt(),
+                new PaymentProvider.Customer(
+                        buyer.getId().toString(),
+                        providerCustomerId,
+                        buyer.getName(),
+                        buyer.getEmail(),
+                        buyer.getPhone(),
+                        sensitiveData.decrypt(buyer.getDocumentNumberEncrypted()))));
+        buyer.setPaymentProvider(provider.name());
+        buyer.setProviderCustomerId(created.providerCustomerId());
+
         Payment payment = Payment.builder()
                 .order(order)
-                .provider("FAKE")
+                .provider(provider.name())
                 .paymentMethod("PIX")
                 .providerPaymentId(created.providerPaymentId())
-                .idempotencyKey("pix:" + order.getId())
+                .idempotencyKey(provider.name().toLowerCase(Locale.ROOT) + ":pix:" + order.getId())
                 .status(PaymentStatus.PENDING)
                 .amount(order.getTotalAmount())
                 .currency("BRL")
                 .pixCopyPaste(created.copyPaste())
                 .pixQrCodeUrl(created.qrCodeDataUrl())
-                .expiresAt(created.expiresAt())
-                .providerResponse(Map.of("mode", "development"))
+                .expiresAt(earliest(order.getExpiresAt(), created.expiresAt()))
+                .providerResponse(created.providerResponse())
                 .build();
         return PaymentView.from(payments.save(payment));
     }
@@ -266,6 +282,16 @@ public class CheckoutService {
                 }).toList());
     }
 
+    private OffsetDateTime earliest(OffsetDateTime first, OffsetDateTime second) {
+        if (first == null) {
+            return second;
+        }
+        if (second == null) {
+            return first;
+        }
+        return first.isBefore(second) ? first : second;
+    }
+
     private String normalizeTicketToken(String value) {
         String trimmed = value == null ? "" : value.trim();
         int marker = trimmed.lastIndexOf("/t/");
@@ -289,11 +315,16 @@ public class CheckoutService {
                                   List<@Valid Buyer> participants,
                                   @AssertTrue boolean acceptedTerms, @AssertTrue boolean acceptedPrivacy) {}
     public record PaymentView(UUID id, String provider, String paymentMethod, PaymentStatus status, BigDecimal amount,
-                              String currency, String pixCopyPaste, String pixQrCodeUrl, OffsetDateTime expiresAt) {
+                              String currency, String pixCopyPaste, String pixQrCodeUrl, OffsetDateTime expiresAt,
+                              String invoiceUrl, boolean sandbox) {
         static PaymentView from(Payment payment) {
+            Map<String, Object> response = payment.getProviderResponse() == null ? Map.of() : payment.getProviderResponse();
+            Object invoice = response.get("invoiceUrl");
+            Object sandboxValue = response.get("sandbox");
             return new PaymentView(payment.getId(), payment.getProvider(), payment.getPaymentMethod(), payment.getStatus(),
                     payment.getAmount(), payment.getCurrency(), payment.getPixCopyPaste(), payment.getPixQrCodeUrl(),
-                    payment.getExpiresAt());
+                    payment.getExpiresAt(), invoice == null ? null : String.valueOf(invoice),
+                    sandboxValue instanceof Boolean value && value);
         }
     }
     public record TicketView(String publicCode, TicketStatus status, String attendeeName, String ticketType,

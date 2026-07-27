@@ -3,6 +3,7 @@ package com.eventaccess.platform.service;
 import com.eventaccess.platform.domain.*;
 import com.eventaccess.platform.domain.Enums.*;
 import com.eventaccess.platform.repository.*;
+import com.eventaccess.platform.payment.PaymentProvider;
 import com.eventaccess.platform.web.ApiException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,10 +21,11 @@ public class PaymentService {
     private final CryptoService crypto;
     private final QrCodeService qr;
     private final AuditService audit;
+    private final PaymentProvider provider;
 
     public PaymentService(PaymentRepository payments, OrderRepository orders, OrderItemRepository items,
                           TicketRepository tickets, TicketTypeRepository types, CryptoService crypto,
-                          QrCodeService qr, AuditService audit) {
+                          QrCodeService qr, AuditService audit, PaymentProvider provider) {
         this.payments = payments;
         this.orders = orders;
         this.items = items;
@@ -32,12 +34,63 @@ public class PaymentService {
         this.crypto = crypto;
         this.qr = qr;
         this.audit = audit;
+        this.provider = provider;
     }
 
     @Transactional(readOnly = true)
     public void assertOwned(UUID paymentId, UUID organizationId) {
         payments.findByIdAndOrderOrganizationId(paymentId, organizationId)
                 .orElseThrow(() -> ApiException.notFound("Pagamento não encontrado."));
+    }
+
+    @Transactional
+    public CheckoutService.OrderView approveFake(UUID paymentId) {
+        Payment payment = payments.findById(paymentId)
+                .orElseThrow(() -> ApiException.notFound("Pagamento não encontrado."));
+        if (!"FAKE".equalsIgnoreCase(payment.getProvider()) || !"FAKE".equalsIgnoreCase(provider.name())) {
+            throw ApiException.conflict("MANUAL_APPROVAL_NOT_ALLOWED",
+                    "Cobranças Asaas devem ser confirmadas no Sandbox do Asaas ou por webhook.");
+        }
+        return approve(paymentId);
+    }
+
+    @Transactional
+    public CheckoutService.OrderView synchronize(UUID paymentId) {
+        Payment payment = payments.findById(paymentId)
+                .orElseThrow(() -> ApiException.notFound("Pagamento não encontrado."));
+        if (!provider.name().equalsIgnoreCase(payment.getProvider())) {
+            throw ApiException.conflict("PAYMENT_PROVIDER_MISMATCH", "O provedor ativo não corresponde ao pagamento.");
+        }
+        return reconcile(paymentId, provider.findPayment(payment.getProviderPaymentId()));
+    }
+
+    private CheckoutService.OrderView reconcile(UUID paymentId, PaymentProvider.ProviderPayment providerPayment) {
+        Payment payment = payments.findById(paymentId)
+                .orElseThrow(() -> ApiException.notFound("Pagamento não encontrado."));
+        if (providerPayment.amount().compareTo(payment.getAmount()) != 0) {
+            throw ApiException.badRequest("PAYMENT_AMOUNT_MISMATCH", "Valor retornado pelo provedor está divergente.");
+        }
+        payment.setProviderResponse(providerPayment.providerResponse());
+        String status = providerPayment.status() == null ? "" : providerPayment.status().toUpperCase(Locale.ROOT);
+        return switch (status) {
+            case "APPROVED", "RECEIVED", "CONFIRMED", "RECEIVED_IN_CASH" -> approve(paymentId);
+            case "EXPIRED", "OVERDUE" -> {
+                expire(paymentId);
+                yield currentView(paymentId);
+            }
+            case "FAILED", "REJECTED", "REFUSED" -> {
+                fail(paymentId, "Falha informada pelo provedor");
+                yield currentView(paymentId);
+            }
+            default -> currentView(paymentId);
+        };
+    }
+
+    @Transactional(readOnly = true)
+    public CheckoutService.OrderView currentView(UUID paymentId) {
+        Payment payment = payments.findById(paymentId)
+                .orElseThrow(() -> ApiException.notFound("Pagamento não encontrado."));
+        return view(payment.getOrder(), payment);
     }
 
     @Transactional

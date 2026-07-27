@@ -12,4 +12,5 @@ public class ApiException extends RuntimeException {
     public static ApiException forbidden(String message) { return new ApiException(HttpStatus.FORBIDDEN,"FORBIDDEN",message); }
     public static ApiException conflict(String code,String message) { return new ApiException(HttpStatus.CONFLICT,code,message); }
     public static ApiException badRequest(String code,String message) { return new ApiException(HttpStatus.BAD_REQUEST,code,message); }
+    public static ApiException paymentProvider(String message) { return new ApiException(HttpStatus.BAD_GATEWAY,"PAYMENT_PROVIDER_ERROR",message); }
 }

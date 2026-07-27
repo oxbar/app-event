@@ -66,20 +66,21 @@ public class RefundService {
             throw ApiException.badRequest("REFUND_AMOUNT_EXCEEDED", "Valor de reembolso maior que o saldo disponível.");
         }
 
-        provider.refundPayment(payment.getProviderPaymentId(), request.amount());
+        PaymentProvider.RefundResult providerRefund = provider.refundPayment(
+                payment.getProviderPaymentId(), request.amount(), request.reason());
         OffsetDateTime now = OffsetDateTime.now();
         UserAccount user = users.findById(principal.userId()).orElseThrow();
         Refund refund = refunds.save(Refund.builder()
                 .payment(payment)
                 .order(payment.getOrder())
                 .requestedBy(user)
-                .providerRefundId("fake-refund-" + UUID.randomUUID())
+                .providerRefundId(providerRefund.providerRefundId())
                 .amount(request.amount())
                 .reason(request.reason())
                 .status(RefundStatus.APPROVED)
                 .requestedAt(now)
                 .processedAt(now)
-                .providerResponse(Map.of("provider", payment.getProvider(), "mode", "synchronous"))
+                .providerResponse(providerRefund.providerResponse())
                 .build());
 
         BigDecimal totalRefunded = alreadyRefunded.add(request.amount());

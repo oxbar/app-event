@@ -25,7 +25,13 @@ public class DevPaymentController {
     @PostMapping("/{id}/approve")
     CheckoutService.OrderView approve(@AuthenticationPrincipal AppPrincipal principal, @PathVariable UUID id) {
         payments.assertOwned(id, principal.organizationId());
-        return payments.approve(id);
+        return payments.approveFake(id);
+    }
+
+    @PostMapping("/{id}/synchronize")
+    CheckoutService.OrderView synchronize(@AuthenticationPrincipal AppPrincipal principal, @PathVariable UUID id) {
+        payments.assertOwned(id, principal.organizationId());
+        return payments.synchronize(id);
     }
 
     @PostMapping("/{id}/fail")

@@ -44,6 +44,12 @@ app:
   qr:
     secret: ${QR_SECRET:change-this-qr-secret-change-this-qr-secret-change-this}
   payment-provider: ${PAYMENT_PROVIDER:FAKE}
+  asaas:
+    base-url: ${ASAAS_BASE_URL:https://api-sandbox.asaas.com/v3}
+    api-key: ${ASAAS_API_KEY:}
+    webhook-token: ${ASAAS_WEBHOOK_TOKEN:}
+    user-agent: ${ASAAS_USER_AGENT:event-access-platform/1.0}
+    sandbox: ${ASAAS_SANDBOX:true}
   data-encryption-secret: ${DATA_ENCRYPTION_SECRET:change-this-data-encryption-secret-change-this}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}

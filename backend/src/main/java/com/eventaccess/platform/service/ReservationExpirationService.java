@@ -2,6 +2,7 @@ package com.eventaccess.platform.service;
 
 import com.eventaccess.platform.domain.Enums.*;
 import com.eventaccess.platform.repository.*;
+import com.eventaccess.platform.payment.PaymentProvider;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,15 +16,17 @@ public class ReservationExpirationService {
     private final TicketTypeRepository ticketTypes;
     private final TicketRepository tickets;
     private final PaymentRepository payments;
+    private final PaymentProvider provider;
 
     public ReservationExpirationService(OrderRepository orders, OrderItemRepository items,
                                         TicketTypeRepository ticketTypes, TicketRepository tickets,
-                                        PaymentRepository payments) {
+                                        PaymentRepository payments, PaymentProvider provider) {
         this.orders = orders;
         this.items = items;
         this.ticketTypes = ticketTypes;
         this.tickets = tickets;
         this.payments = payments;
+        this.provider = provider;
     }
 
     @Scheduled(fixedDelayString = "${app.reservation-expiration-delay-ms:60000}")
@@ -47,6 +50,14 @@ public class ReservationExpirationService {
             payments.findFirstByOrderIdOrderByCreatedAtDesc(order.getId()).ifPresent(payment -> {
                 if (payment.getStatus() == PaymentStatus.PENDING || payment.getStatus() == PaymentStatus.CREATED) {
                     payment.setStatus(PaymentStatus.EXPIRED);
+                    if (provider.name().equalsIgnoreCase(payment.getProvider())
+                            && payment.getProviderPaymentId() != null) {
+                        try {
+                            provider.cancelPayment(payment.getProviderPaymentId());
+                        } catch (RuntimeException ignored) {
+                            payment.setFailureReason("Não foi possível cancelar a cobrança expirada no provedor.");
+                        }
+                    }
                 }
             });
         }

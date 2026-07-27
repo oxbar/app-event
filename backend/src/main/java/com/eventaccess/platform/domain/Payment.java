@@ -21,7 +21,7 @@ public class Payment extends BaseEntity {
     @Column(nullable=false, precision=15, scale=2) private BigDecimal amount;
     @Column(nullable=false, length=3) private String currency;
     @Column(name="pix_copy_paste", columnDefinition="text") private String pixCopyPaste;
-    @Column(name="pix_qr_code_url", length=500) private String pixQrCodeUrl;
+    @Column(name="pix_qr_code_url", columnDefinition="text") private String pixQrCodeUrl;
     @Column(name="expires_at") private OffsetDateTime expiresAt;
     @Column(name="approved_at") private OffsetDateTime approvedAt;
     @Column(name="failed_at") private OffsetDateTime failedAt;

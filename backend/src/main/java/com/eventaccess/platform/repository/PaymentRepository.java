@@ -11,6 +11,7 @@ import java.util.*;
 public interface PaymentRepository extends JpaRepository<Payment, UUID> {
     Optional<Payment> findFirstByOrderIdOrderByCreatedAtDesc(UUID orderId);
     Optional<Payment> findByProviderPaymentId(String id);
+    Optional<Payment> findFirstByOrderPublicCodeOrderByCreatedAtDesc(String publicCode);
     Page<Payment> findByOrderOrganizationId(UUID organizationId, Pageable pageable);
     Optional<Payment> findByIdAndOrderOrganizationId(UUID id, UUID organizationId);
 

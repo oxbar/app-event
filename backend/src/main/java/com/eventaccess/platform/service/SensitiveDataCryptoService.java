@@ -45,4 +45,23 @@ public class SensitiveDataCryptoService {
             throw new IllegalStateException("Falha ao criptografar dado sensível.", ex);
         }
     }
+
+    public String decrypt(String cipherText) {
+        if (cipherText == null || cipherText.isBlank()) {
+            return null;
+        }
+        try {
+            byte[] packed = Base64.getUrlDecoder().decode(cipherText);
+            ByteBuffer buffer = ByteBuffer.wrap(packed);
+            byte[] iv = new byte[IV_LENGTH];
+            buffer.get(iv);
+            byte[] encrypted = new byte[buffer.remaining()];
+            buffer.get(encrypted);
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(TAG_LENGTH_BITS, iv));
+            return new String(cipher.doFinal(encrypted), StandardCharsets.UTF_8);
+        } catch (Exception ex) {
+            throw new IllegalStateException("Falha ao descriptografar dado sensível.", ex);
+        }
+    }
 }

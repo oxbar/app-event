@@ -42,7 +42,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.stream(origins.split(",")).map(String::trim).toList());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of(
-                "Authorization", "Content-Type", "X-Trace-Id", "X-Fake-Signature"));
+                "Authorization", "Content-Type", "X-Trace-Id", "X-Fake-Signature", "asaas-access-token"));
         configuration.setExposedHeaders(List.of("X-Trace-Id"));
         configuration.setAllowCredentials(true);
         var source = new UrlBasedCorsConfigurationSource();

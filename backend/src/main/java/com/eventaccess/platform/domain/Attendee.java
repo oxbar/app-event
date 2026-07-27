@@ -17,4 +17,6 @@ public class Attendee extends BaseEntity {
     @Column(name="birth_date") private LocalDate birthDate;
     @Column(name="accepted_terms_at") private OffsetDateTime acceptedTermsAt;
     @Column(name="accepted_privacy_at") private OffsetDateTime acceptedPrivacyAt;
+    @Column(name="payment_provider", length=50) private String paymentProvider;
+    @Column(name="provider_customer_id", length=150) private String providerCustomerId;
 }

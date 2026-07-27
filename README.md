@@ -6,7 +6,7 @@ Plataforma SaaS de eventos com checkout, Pix, ingresso digital, QR Code individu
 
 1. **Backend:** Java 21, Spring Boot 3.5.16, Spring Security, JPA/Hibernate, PostgreSQL, Flyway, JWT, Swagger e ZXing.
 2. **Frontend:** Angular 20 LTS, standalone components, Signals, Reactive Forms, Taiga UI 5.16 e PWA.
-3. **Pagamento:** `PaymentProvider` desacoplado, com `FakePaymentProvider` funcional para desenvolvimento.
+3. **Pagamento:** `PaymentProvider` desacoplado, com `FakePaymentProvider` e integração Pix `AsaasPaymentProvider` para Sandbox/produção.
 4. **Check-in:** token opaco, armazenamento somente do hash e atualização atômica contra uso simultâneo.
 5. **Integração:** URLs relativas `/api`; proxy do Angular no desenvolvimento e proxy do Nginx no Docker.
 
@@ -62,7 +62,7 @@ As contas são criadas somente quando `APP_ENVIRONMENT=development`.
 1. Entre com `organizer@eventaccess.local`.
 2. Abra **Eventos** e use o checkout público da **Festa de Verão**.
 3. Escolha Comum ou Premium e conclua a identificação.
-4. Na tela Pix, clique em **Aprovar pagamento (DEV)**.
+4. Com `PAYMENT_PROVIDER=FAKE`, aprove a simulação. Com `ASAAS`, confirme a cobrança no painel Sandbox e aguarde o webhook ou use **Sincronizar** em Pagamentos.
 5. Abra o ingresso emitido.
 6. Entre como `door@eventaccess.local`, abra **Portaria**, selecione evento e portaria e leia o QR Code.
 7. A primeira leitura é aprovada; a segunda é recusada como `ALREADY_USED`.
@@ -119,8 +119,21 @@ make zip
 
 ## Escopo entregue
 
-O ZIP implementa de ponta a ponta os fluxos críticos: login, isolamento organizacional, eventos, categorias, checkout, Pix fake, pagamento idempotente, emissão, QR Code, portaria, recusa de duplicidade e dashboard. O schema inclui também as entidades previstas para convites, equipe, reembolsos e auditoria, deixando os módulos administrativos secundários preparados para expansão sem alterar o núcleo transacional.
+O ZIP implementa de ponta a ponta os fluxos críticos: login, isolamento organizacional, eventos, categorias, checkout, Pix fake ou Asaas, webhook idempotente, emissão, QR Code, portaria, recusa de duplicidade e dashboard. O schema inclui também as entidades previstas para convites, equipe, reembolsos e auditoria, deixando os módulos administrativos secundários preparados para expansão sem alterar o núcleo transacional.
 
 ## Atualizações da interface
 
 A versão v5 corrige os seletores de perfil, evento e categoria, adiciona categorias de ingresso em português, color picker da pulseira e tratamento guiado para publicação sem ingressos. Consulte `CHANGELOG-v5.md` e `docs/ui-patch-v5.md`.
+
+
+## Asaas Sandbox
+
+Use `.env.asaas.example` como base. Você precisará da API Key de Sandbox e de um token próprio para o webhook. Não envie nem versione esses segredos. O guia completo está em `docs/asaas-sandbox.md`.
+
+```powershell
+Copy-Item .env.asaas.example .env
+notepad .env
+podman compose up --build -d
+```
+
+A versão v6 também corrige o checkout público, o armazenamento do QR Code Base64 e a atualização automática do faturamento. Consulte `CHANGELOG-v6.md`.
