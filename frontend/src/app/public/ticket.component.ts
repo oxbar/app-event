@@ -1,17 +1,21 @@
 import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {TuiButton, TuiLoader} from '@taiga-ui/core';
+import {apiErrorMessage} from '../core/api-error';
 import {CheckoutApi} from '../core/api.services';
 import {Ticket} from '../core/models';
+import {DisplayLabelPipe} from '../shared/display-label.pipe';
 
 @Component({
   standalone: true,
-  imports: [TuiButton, TuiLoader],
+  imports: [TuiButton, TuiLoader, DisplayLabelPipe],
   template: `
     <main class="ticket-page">
-      @if (ticket(); as current) {
+      @if (error()) {
+        <section class="error-panel" role="alert">{{error()}}</section>
+      } @else if (ticket(); as current) {
         <article class="digital-ticket">
-          <header><span>EVENT ACCESS</span><b>{{current.status}}</b></header>
+          <header><span>EVENT ACCESS</span><b>{{current.status | displayLabel}}</b></header>
           <h1>{{current.ticketType}}</h1>
           <p>{{current.attendeeName}}</p>
           @if (current.qrCodeDataUrl) {
@@ -37,10 +41,14 @@ import {Ticket} from '../core/models';
 export class TicketComponent {
   private readonly api = inject(CheckoutApi);
   readonly ticket = signal<Ticket | null>(null);
+  readonly error = signal('');
 
   constructor() {
     const token = inject(ActivatedRoute).snapshot.paramMap.get('token') ?? '';
-    this.api.ticket(token).subscribe(value => this.ticket.set(value));
+    this.api.ticket(token).subscribe({
+      next: value => this.ticket.set(value),
+      error: error => this.error.set(apiErrorMessage(error, 'Não foi possível carregar o ingresso.')),
+    });
   }
 
   fullscreen(): void {

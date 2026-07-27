@@ -10,7 +10,7 @@ import {DashboardSummary} from '../core/models';
   imports: [CurrencyPipe, TuiButton, TuiLoader],
   template: `
     <div class="page-title">
-      <div><h1>Dashboard</h1><p>Visão operacional e financeira da organização.</p></div>
+      <div><h1>Visão geral</h1><p>Resumo operacional e financeiro da organização.</p></div>
       <button tuiButton appearance="secondary" type="button" (click)="load()" [disabled]="loading()">
         Atualizar
       </button>
@@ -63,7 +63,7 @@ export class DashboardComponent {
         this.loading.set(false);
       },
       error: error => {
-        this.error.set(apiErrorMessage(error, 'Não foi possível carregar o dashboard.'));
+        this.error.set(apiErrorMessage(error, 'Não foi possível carregar a visão geral.'));
         this.loading.set(false);
       },
     });

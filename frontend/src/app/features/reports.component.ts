@@ -26,7 +26,7 @@ import {EventModel} from '../core/models';
           Exportar vendas
         </button>
         <button tuiButton appearance="secondary" type="button" (click)="download('checkins')" [disabled]="loading() || !eventControl.value">
-          Exportar check-ins
+          Exportar entradas
         </button>
         @if (loading()) {<tui-loader size="s" />}
       </div>
@@ -67,7 +67,7 @@ export class ReportsComponent {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `${type}.csv`;
+        link.download = type === 'sales' ? 'vendas.csv' : 'entradas.csv';
         link.click();
         URL.revokeObjectURL(url);
         this.loading.set(false);

@@ -20,7 +20,7 @@ import {AuthService} from '../core/auth.service';
         @if (message()) {<div class="success-panel">{{message()}}</div>}
         @if (developmentToken()) {
           <div class="dev-token">
-            <small>Token DEV</small><code>{{developmentToken()}}</code>
+            <small>Token de desenvolvimento</small><code>{{developmentToken()}}</code>
             <a tuiButton [routerLink]="['/reset-password']" [queryParams]="{token: developmentToken()}">Redefinir agora</a>
           </div>
         }

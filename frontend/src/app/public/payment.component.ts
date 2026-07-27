@@ -4,15 +4,19 @@ import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {ActivatedRoute} from '@angular/router';
 import {TuiButton, TuiLoader} from '@taiga-ui/core';
 import {interval, startWith, switchMap, takeWhile} from 'rxjs';
+import {apiErrorMessage} from '../core/api-error';
 import {CheckoutApi} from '../core/api.services';
 import {Order} from '../core/models';
+import {DisplayLabelPipe} from '../shared/display-label.pipe';
 
 @Component({
   standalone: true,
-  imports: [CurrencyPipe, TuiButton, TuiLoader],
+  imports: [CurrencyPipe, TuiButton, TuiLoader, DisplayLabelPipe],
   template: `
     <main class="public-page narrow">
-      @if (order(); as current) {
+      @if (error()) {
+        <section class="error-panel" role="alert">{{error()}}</section>
+      } @else if (order(); as current) {
         <section class="panel payment-card">
           @if (current.status === 'PAID') {
             <div class="success-icon">✓</div>
@@ -30,16 +34,17 @@ import {Order} from '../core/models';
             <p>O prazo do Pix terminou e a reserva foi liberada.</p>
           } @else {
             <h1>Pague com Pix</h1>
+            <span class="status">{{current.status | displayLabel}}</span>
             <strong>{{current.totalAmount | currency:'BRL'}}</strong>
             @if (current.payment) {
               <img [src]="current.payment.pixQrCodeUrl" alt="QR Code Pix" />
-              <textarea readonly>{{current.payment.pixCopyPaste}}</textarea>
-              <button tuiButton type="button" (click)="copy(current.payment.pixCopyPaste)">Copiar Pix</button>
+              <textarea readonly aria-label="Código Pix copia e cola">{{current.payment.pixCopyPaste}}</textarea>
+              <button tuiButton type="button" (click)="copy(current.payment.pixCopyPaste)">Copiar código Pix</button>
               <button tuiButton appearance="secondary" type="button" (click)="approve(current.payment.id)">
-                Aprovar pagamento (DEV)
+                Aprovar pagamento no ambiente de desenvolvimento
               </button>
             }
-            <p>O status é atualizado automaticamente até a aprovação ou expiração.</p>
+            <p>A situação é atualizada automaticamente até a aprovação ou expiração.</p>
           }
         </section>
       } @else {
@@ -54,6 +59,7 @@ export class PaymentComponent {
   private readonly code = inject(ActivatedRoute).snapshot.paramMap.get('code') ?? '';
   private readonly destroyRef = inject(DestroyRef);
   readonly order = signal<Order | null>(null);
+  readonly error = signal('');
 
   constructor() {
     interval(2500).pipe(
@@ -61,7 +67,10 @@ export class PaymentComponent {
       switchMap(() => this.api.status(this.code)),
       takeWhile(value => !['PAID', 'EXPIRED', 'CANCELED', 'REFUNDED'].includes(value.status), true),
       takeUntilDestroyed(this.destroyRef),
-    ).subscribe(value => this.order.set(value));
+    ).subscribe({
+      next: value => this.order.set(value),
+      error: error => this.error.set(apiErrorMessage(error, 'Não foi possível consultar a situação do pagamento.')),
+    });
   }
 
   token(qrValue: string): string {
@@ -73,6 +82,10 @@ export class PaymentComponent {
   }
 
   approve(id: string): void {
-    this.api.approve(id).subscribe(value => this.order.set(value));
+    this.error.set('');
+    this.api.approve(id).subscribe({
+      next: value => this.order.set(value),
+      error: error => this.error.set(apiErrorMessage(error, 'Não foi possível aprovar o pagamento simulado.')),
+    });
   }
 }

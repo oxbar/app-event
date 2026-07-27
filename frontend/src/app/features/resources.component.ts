@@ -3,35 +3,45 @@ import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core'
 import {ActivatedRoute} from '@angular/router';
 import {TuiButton, TuiLoader} from '@taiga-ui/core';
 import {TuiPagination} from '@taiga-ui/kit';
+import {apiErrorMessage} from '../core/api-error';
 import {AdminApi, AdminKind} from '../core/api.services';
 import {AdminRow} from '../core/models';
+import {DisplayLabelPipe} from '../shared/display-label.pipe';
 
 @Component({
   standalone: true,
-  imports: [CurrencyPipe, DatePipe, TuiButton, TuiLoader, TuiPagination],
+  imports: [CurrencyPipe, DatePipe, TuiButton, TuiLoader, TuiPagination, DisplayLabelPipe],
   template: `
     <div class="page-title">
       <div><h1>{{title()}}</h1><p>Dados reais da organização autenticada.</p></div>
-      <button tuiButton appearance="secondary" type="button" (click)="load(pageIndex)">Atualizar</button>
+      <button tuiButton appearance="secondary" type="button" (click)="load(pageIndex)" [disabled]="loading()">Atualizar</button>
     </div>
+
+    @if (error()) {
+      <section class="error-panel" role="alert">
+        <p>{{error()}}</p>
+        <button tuiButton type="button" (click)="load(pageIndex)">Tentar novamente</button>
+      </section>
+    }
+
     @if (loading()) {
       <tui-loader />
     } @else {
       <section class="resource-table">
         <div class="resource-head">
-          <span>Identificação</span><span>Contexto</span><span>Status</span><span>Valor/Data</span><span>Ações</span>
+          <span>Identificação</span><span>Contexto</span><span>Situação</span><span>Valor/Data</span><span>Ações</span>
         </div>
         @for (row of rows(); track row.id) {
           <article>
             <div>
-              <strong>{{row.publicCode || row.orderCode || row.action || row.name || row.id}}</strong>
-              <small>{{row.buyerEmail || row.attendeeEmail || row.email || row.entityType}}</small>
+              <strong>{{row.publicCode || row.orderCode || row.name || (row.action | displayLabel:'') || row.id}}</strong>
+              <small>{{row.buyerEmail || row.attendeeEmail || row.email || (row.entityType | displayLabel:'')}}</small>
             </div>
             <div>
-              <strong>{{row.eventName || row.buyerName || row.attendeeName || row.provider || row.reason}}</strong>
-              <small>{{row.typeName || row.method || row.phoneMasked || row.entityId}}</small>
+              <strong>{{row.eventName || row.buyerName || row.attendeeName || (row.provider | displayLabel:'') || row.reason}}</strong>
+              <small>{{row.typeName || (row.method | displayLabel:'') || row.phoneMasked || row.entityId}}</small>
             </div>
-            <span class="status">{{row.status || 'REGISTRADO'}}</span>
+            <span class="status">{{row.status | displayLabel:'Registrado'}}</span>
             <div>
               <strong>
                 @if (row.totalAmount !== undefined) {
@@ -73,6 +83,7 @@ export class ResourcesComponent {
   readonly kind = this.route.snapshot.data['kind'] as AdminKind;
   readonly rows = signal<AdminRow[]>([]);
   readonly loading = signal(true);
+  readonly error = signal('');
   readonly totalPages = signal(0);
   readonly title = signal(this.route.snapshot.data['title'] as string);
   pageIndex = 0;
@@ -83,6 +94,7 @@ export class ResourcesComponent {
 
   load(page: number): void {
     this.loading.set(true);
+    this.error.set('');
     this.api.list(this.kind, page).subscribe({
       next: result => {
         this.pageIndex = result.number;
@@ -90,7 +102,11 @@ export class ResourcesComponent {
         this.totalPages.set(result.totalPages);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false),
+      error: error => {
+        this.rows.set([]);
+        this.error.set(apiErrorMessage(error, `Não foi possível carregar ${this.title().toLocaleLowerCase('pt-BR')}.`));
+        this.loading.set(false);
+      },
     });
   }
 
@@ -103,14 +119,23 @@ export class ResourcesComponent {
   }
 
   block(id: string): void {
-    this.api.blockTicket(id, 'Bloqueio solicitado no painel').subscribe(() => this.load(this.pageIndex));
+    this.api.blockTicket(id, 'Bloqueio solicitado no painel').subscribe({
+      next: () => this.load(this.pageIndex),
+      error: error => this.error.set(apiErrorMessage(error, 'Não foi possível bloquear o ingresso.')),
+    });
   }
 
   unblock(id: string): void {
-    this.api.unblockTicket(id).subscribe(() => this.load(this.pageIndex));
+    this.api.unblockTicket(id).subscribe({
+      next: () => this.load(this.pageIndex),
+      error: error => this.error.set(apiErrorMessage(error, 'Não foi possível desbloquear o ingresso.')),
+    });
   }
 
   resend(id: string): void {
-    this.api.resendTicket(id).subscribe(() => this.load(this.pageIndex));
+    this.api.resendTicket(id).subscribe({
+      next: () => this.load(this.pageIndex),
+      error: error => this.error.set(apiErrorMessage(error, 'Não foi possível reenviar o ingresso.')),
+    });
   }
 }

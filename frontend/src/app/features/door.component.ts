@@ -3,57 +3,68 @@ import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {TuiButton, TuiInput} from '@taiga-ui/core';
 import {TuiSelect} from '@taiga-ui/kit';
 import {BrowserQRCodeReader} from '@zxing/browser';
-import {CheckinApi, EventApi} from '../core/api.services';
 import {apiErrorMessage} from '../core/api-error';
+import {CheckinApi, EventApi} from '../core/api.services';
 import {AccessPoint, CheckinResult, EventModel} from '../core/models';
+import {DisplayLabelPipe} from '../shared/display-label.pipe';
+import {FormErrorComponent} from '../shared/form-error.component';
 
 @Component({
   standalone: true,
-  imports: [ReactiveFormsModule, TuiButton, TuiInput, TuiSelect],
+  imports: [ReactiveFormsModule, TuiButton, TuiInput, TuiSelect, DisplayLabelPipe, FormErrorComponent],
   template: `
-    <div class="page-title"><div><h1>Portaria</h1><p>Leitura mobile-first com prevenção de acesso duplicado.</p></div></div>
+    <div class="page-title"><div><h1>Portaria</h1><p>Leitura rápida com prevenção de acesso duplicado.</p></div></div>
     @if (error()) {<section class="error-panel" role="alert">{{error()}}</section>}
     <section class="door-layout">
       <div class="panel">
-        <form [formGroup]="form">
-          <label>Evento</label>
+        <form [formGroup]="form" novalidate>
+          <label for="door-event">Evento</label>
           <tui-textfield>
-            <select tuiSelect formControlName="eventId">
+            <select id="door-event" tuiSelect formControlName="eventId">
+              <option value="">Selecione o evento</option>
               @for (event of events(); track event.id) {
                 <option [value]="event.id">{{event.name}}</option>
               }
             </select>
           </tui-textfield>
 
-          <label>Portaria</label>
+          <label for="door-point">Portaria</label>
           <tui-textfield>
-            <select tuiSelect formControlName="pointId">
+            <select id="door-point" tuiSelect formControlName="pointId">
+              <option value="">Selecione a portaria</option>
               @for (point of points(); track point.id) {
                 <option [value]="point.id">{{point.name}}</option>
               }
             </select>
           </tui-textfield>
 
-          <video #video playsinline></video>
+          <video #video playsinline aria-label="Visualização da câmera para leitura do QR Code"></video>
           <div class="button-row">
-            <button tuiButton type="button" (click)="start()" [disabled]="cameraActive()">Iniciar câmera</button>
-            <button tuiButton appearance="secondary" type="button" (click)="stop()" [disabled]="!cameraActive()">Parar</button>
+            <button tuiButton type="button" (click)="start()" [disabled]="cameraActive() || !form.controls.eventId.value || !form.controls.pointId.value">Iniciar câmera</button>
+            <button tuiButton appearance="secondary" type="button" (click)="stop()" [disabled]="!cameraActive()">Parar câmera</button>
           </div>
 
-          <tui-textfield><input tuiInput placeholder="Cole ou digite o código" formControlName="token" /></tui-textfield>
-          <button tuiButton type="button" (click)="manual()" [disabled]="form.controls.token.invalid || submitting()">
+          <div class="form-field">
+            <label for="door-token">Código do ingresso</label>
+            <tui-textfield><input id="door-token" tuiInput autocomplete="off" placeholder="Cole ou digite o código" formControlName="token" /></tui-textfield>
+            <app-form-error [control]="form.controls.token" label="Código do ingresso" />
+          </div>
+          <button tuiButton type="button" (click)="manual()" [disabled]="submitting()">
             {{submitting() ? 'Validando...' : 'Validar manualmente'}}
           </button>
         </form>
       </div>
 
       @if (result(); as current) {
-        <article class="scan-result" [class.approved]="current.approved">
+        <article class="scan-result" [class.approved]="current.approved" role="status" aria-live="assertive">
           <strong>{{current.approved ? 'ENTRADA LIBERADA' : 'ENTRADA NEGADA'}}</strong>
-          <h2>{{current.attendeeName}}</h2>
-          <p>{{current.ticketType}} · {{current.wristbandLabel}}</p>
-          <p>{{current.message}}</p>
+          <h2>{{current.attendeeName || 'Participante não identificado'}}</h2>
+          <p>{{current.ticketType}} @if (current.wristbandLabel) {· {{current.wristbandLabel}}}</p>
+          <p>{{current.message || (current.result | displayLabel)}}</p>
+          @if (current.accessPoint) {<small>Portaria: {{current.accessPoint}}</small>}
         </article>
+      } @else {
+        <article class="panel empty">Aguardando a leitura de um ingresso.</article>
       }
     </section>
   `,
@@ -76,11 +87,13 @@ export class DoorComponent {
   readonly form = this.fb.nonNullable.group({
     eventId: ['', Validators.required],
     pointId: ['', Validators.required],
-    token: ['', Validators.required],
+    token: ['', [Validators.required, Validators.minLength(8)]],
   });
 
   constructor() {
     this.form.controls.eventId.valueChanges.subscribe(eventId => {
+      this.points.set([]);
+      this.form.controls.pointId.setValue('', {emitEvent: false});
       if (eventId) this.loadPoints(eventId);
     });
     this.eventsApi.list(0, 100).subscribe({
@@ -104,7 +117,7 @@ export class DoorComponent {
   }
 
   async start(): Promise<void> {
-    if (!this.video || this.cameraActive()) return;
+    if (!this.video || this.cameraActive() || this.form.controls.eventId.invalid || this.form.controls.pointId.invalid) return;
     this.error.set('');
     try {
       this.cameraActive.set(true);
@@ -119,7 +132,7 @@ export class DoorComponent {
           }
         },
       );
-    } catch (error) {
+    } catch {
       this.cameraActive.set(false);
       this.error.set('Não foi possível acessar a câmera. Verifique a permissão do navegador.');
     }
@@ -132,7 +145,10 @@ export class DoorComponent {
   }
 
   manual(): void {
-    if (this.form.controls.token.invalid) return;
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
     this.scan(this.form.controls.token.value.trim());
   }
 
@@ -142,6 +158,7 @@ export class DoorComponent {
     if (!eventId || !pointId || !token || this.submitting()) return;
     this.submitting.set(true);
     this.error.set('');
+    this.result.set(null);
     this.api.scan(eventId, token, pointId).subscribe({
       next: result => {
         this.result.set(result);
