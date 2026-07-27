@@ -2,12 +2,13 @@ import {CurrencyPipe, DatePipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {TuiButton, TuiCheckbox, TuiInput, TuiLoader} from '@taiga-ui/core';
-import {TuiPagination, TuiSelect} from '@taiga-ui/kit';
-import {apiErrorMessage} from '../core/api-error';
+import {TuiInputColor, TuiPagination} from '@taiga-ui/kit';
+import {apiErrorCode, apiErrorMessage} from '../core/api-error';
 import {EventApi} from '../core/api.services';
 import {EventModel, TicketType} from '../core/models';
 import {DisplayLabelPipe} from '../shared/display-label.pipe';
 import {FormErrorComponent} from '../shared/form-error.component';
+import {SelectFieldComponent, SelectOption} from '../shared/select-field.component';
 import {dateRangeValidator} from '../shared/validators';
 
 @Component({
@@ -21,7 +22,8 @@ import {dateRangeValidator} from '../shared/validators';
     TuiInput,
     TuiLoader,
     TuiPagination,
-    TuiSelect,
+    TuiInputColor,
+    SelectFieldComponent,
     DisplayLabelPipe,
     FormErrorComponent,
   ],
@@ -38,6 +40,9 @@ import {dateRangeValidator} from '../shared/validators';
         <p>{{error()}}</p>
         <button tuiButton type="button" (click)="load()">Tentar novamente</button>
       </section>
+    }
+    @if (success()) {
+      <section class="success-panel" role="status">{{success()}}</section>
     }
 
     @if (showForm()) {
@@ -100,7 +105,9 @@ import {dateRangeValidator} from '../shared/validators';
             <div class="button-row">
               <button tuiButton appearance="secondary" type="button" (click)="manage(event)">Configurar ingressos</button>
               @if (event.status === 'DRAFT') {
-                <button tuiButton type="button" (click)="publish(event.id)">Publicar</button>
+                <button tuiButton type="button" [disabled]="publishingId() === event.id" (click)="publish(event)">
+                  {{publishingId() === event.id ? 'Publicando...' : 'Publicar'}}
+                </button>
               }
               <a tuiButton appearance="flat" [href]="'/e/' + event.slug" target="_blank" rel="noopener">Abrir checkout</a>
             </div>
@@ -116,7 +123,7 @@ import {dateRangeValidator} from '../shared/validators';
     }
 
     @if (selected(); as event) {
-      <section class="panel">
+      <section class="panel ticket-config-panel">
         <div class="page-title">
           <div><h2>Ingressos de {{event.name}}</h2><p>Configure categoria, valores, estoque e pulseira.</p></div>
           <button tuiButton appearance="flat" type="button" (click)="selected.set(null)">Fechar</button>
@@ -143,13 +150,15 @@ import {dateRangeValidator} from '../shared/validators';
           </div>
           <div class="form-field">
             <label for="ticket-category">Categoria</label>
-            <tui-textfield>
-              <select id="ticket-category" tuiSelect formControlName="category">
-                <option value="COMMON">Comum</option>
-                <option value="PREMIUM">Premium</option>
-                <option value="VIP">VIP</option>
-              </select>
-            </tui-textfield>
+            <app-select-field
+              [control]="ticketForm.controls.category"
+              [options]="categoryOptions"
+              placeholder="Selecione a categoria"
+              ariaLabel="Categoria do ingresso"
+              inputId="ticket-category"
+            />
+            <app-form-error [control]="ticketForm.controls.category" label="Categoria" />
+            <p class="form-hint">A categoria define um padrão inicial de nome e pulseira, que pode ser personalizado.</p>
           </div>
           <div class="form-field">
             <label for="ticket-price">Preço</label>
@@ -180,8 +189,23 @@ import {dateRangeValidator} from '../shared/validators';
             <tui-textfield><input id="wristband-color-name" tuiInput placeholder="Ex.: Preta" formControlName="wristbandColorName" /></tui-textfield>
           </div>
           <div class="form-field">
-            <label for="wristband-color">Cor hexadecimal</label>
-            <tui-textfield><input id="wristband-color" tuiInput placeholder="#000000" maxlength="7" formControlName="wristbandColorHex" /></tui-textfield>
+            <label for="wristband-color">Cor da pulseira</label>
+            <tui-textfield iconStart=" ">
+              <input
+                id="wristband-color"
+                tuiInputColor
+                list="wristband-colors"
+                placeholder="#000000"
+                formControlName="wristbandColorHex"
+              />
+            </tui-textfield>
+            <datalist id="wristband-colors">
+              @for (color of suggestedColors; track color) {<option [value]="color"></option>}
+            </datalist>
+            <div class="color-preview-row">
+              <span class="color-preview" [style.background]="ticketForm.controls.wristbandColorHex.value"></span>
+              <small>{{ticketForm.controls.wristbandColorHex.value}} · prévia da pulseira</small>
+            </div>
             <app-form-error [control]="ticketForm.controls.wristbandColorHex" label="Cor da pulseira" />
           </div>
           <button tuiButton type="submit" [disabled]="saving()">
@@ -204,7 +228,29 @@ export class EventsComponent {
   readonly loading = signal(false);
   readonly saving = signal(false);
   readonly error = signal('');
+  readonly success = signal('');
+  readonly publishingId = signal('');
   pageIndex = 0;
+
+  readonly categoryOptions: readonly SelectOption[] = [
+    {value: 'COMMON', label: 'Comum'},
+    {value: 'PREMIUM', label: 'Premium'},
+    {value: 'VIP', label: 'VIP'},
+    {value: 'CABIN', label: 'Camarote'},
+    {value: 'BACKSTAGE', label: 'Backstage'},
+    {value: 'COURTESY', label: 'Cortesia'},
+  ];
+
+  readonly suggestedColors = ['#FFFFFF', '#111111', '#D4AF37', '#7C3AED', '#DC2626', '#2563EB'];
+
+  private readonly categoryPresets: Record<string, {name: string; wristbandLabel: string; wristbandColorName: string; wristbandColorHex: string}> = {
+    COMMON: {name: 'Comum', wristbandLabel: 'Pulseira branca', wristbandColorName: 'Branca', wristbandColorHex: '#FFFFFF'},
+    PREMIUM: {name: 'Premium', wristbandLabel: 'Pulseira preta', wristbandColorName: 'Preta', wristbandColorHex: '#111111'},
+    VIP: {name: 'VIP', wristbandLabel: 'Pulseira dourada', wristbandColorName: 'Dourada', wristbandColorHex: '#D4AF37'},
+    CABIN: {name: 'Camarote', wristbandLabel: 'Pulseira roxa', wristbandColorName: 'Roxa', wristbandColorHex: '#7C3AED'},
+    BACKSTAGE: {name: 'Backstage', wristbandLabel: 'Pulseira vermelha', wristbandColorName: 'Vermelha', wristbandColorHex: '#DC2626'},
+    COURTESY: {name: 'Cortesia', wristbandLabel: 'Pulseira azul', wristbandColorName: 'Azul', wristbandColorHex: '#2563EB'},
+  };
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(200)]],
@@ -229,6 +275,7 @@ export class EventsComponent {
   });
 
   constructor() {
+    this.ticketForm.controls.category.valueChanges.subscribe(category => this.applyCategoryPreset(category));
     this.load();
   }
 
@@ -289,6 +336,7 @@ export class EventsComponent {
   manage(event: EventModel): void {
     this.selected.set(event);
     this.error.set('');
+    this.success.set('');
     this.api.types(event.id).subscribe({
       next: types => this.types.set(types),
       error: error => this.error.set(apiErrorMessage(error, 'Não foi possível carregar os tipos de ingresso.')),
@@ -309,6 +357,17 @@ export class EventsComponent {
           next: types => {
             this.types.set(types);
             this.saving.set(false);
+            this.success.set('Ingresso cadastrado com sucesso. O evento já pode ser publicado.');
+            const category = this.ticketForm.controls.category.value;
+            this.ticketForm.reset({
+              category,
+              price: 50,
+              serviceFee: 5,
+              totalQuantity: 500,
+              maxPerOrder: 5,
+              sortOrder: types.length + 1,
+              ...this.categoryPresets[category],
+            });
           },
           error: error => {
             this.error.set(apiErrorMessage(error, 'O ingresso foi criado, mas a lista não pôde ser atualizada.'));
@@ -323,11 +382,40 @@ export class EventsComponent {
     });
   }
 
-  publish(id: string): void {
+  private applyCategoryPreset(category: string): void {
+    const preset = this.categoryPresets[category];
+    if (!preset) return;
+
+    const controls = this.ticketForm.controls;
+    if (controls.name.pristine) controls.name.setValue(preset.name);
+    if (controls.wristbandLabel.pristine) controls.wristbandLabel.setValue(preset.wristbandLabel);
+    if (controls.wristbandColorName.pristine) controls.wristbandColorName.setValue(preset.wristbandColorName);
+    if (controls.wristbandColorHex.pristine) controls.wristbandColorHex.setValue(preset.wristbandColorHex);
+  }
+
+  publish(event: EventModel): void {
+    if (this.publishingId()) return;
+
     this.error.set('');
-    this.api.publish(id).subscribe({
-      next: () => this.load(),
-      error: error => this.error.set(apiErrorMessage(error, 'Não foi possível publicar o evento.')),
+    this.success.set('');
+    this.publishingId.set(event.id);
+    this.api.publish(event.id).subscribe({
+      next: () => {
+        this.publishingId.set('');
+        this.success.set(`Evento “${event.name}” publicado. O checkout está disponível.`);
+        this.load();
+      },
+      error: error => {
+        this.publishingId.set('');
+        const message = apiErrorMessage(error, 'Não foi possível publicar o evento.');
+        if (apiErrorCode(error) === 'TICKET_TYPE_REQUIRED') {
+          this.manage(event);
+          this.error.set(message);
+          queueMicrotask(() => document.querySelector('.ticket-config-panel')?.scrollIntoView({behavior: 'smooth', block: 'start'}));
+          return;
+        }
+        this.error.set(message);
+      },
     });
   }
 }

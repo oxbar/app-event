@@ -120,3 +120,7 @@ make zip
 ## Escopo entregue
 
 O ZIP implementa de ponta a ponta os fluxos críticos: login, isolamento organizacional, eventos, categorias, checkout, Pix fake, pagamento idempotente, emissão, QR Code, portaria, recusa de duplicidade e dashboard. O schema inclui também as entidades previstas para convites, equipe, reembolsos e auditoria, deixando os módulos administrativos secundários preparados para expansão sem alterar o núcleo transacional.
+
+## Atualizações da interface
+
+A versão v5 corrige os seletores de perfil, evento e categoria, adiciona categorias de ingresso em português, color picker da pulseira e tratamento guiado para publicação sem ingressos. Consulte `CHANGELOG-v5.md` e `docs/ui-patch-v5.md`.

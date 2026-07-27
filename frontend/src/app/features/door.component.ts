@@ -1,17 +1,17 @@
-import {ChangeDetectionStrategy, Component, ElementRef, inject, signal, ViewChild} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, ElementRef, inject, signal, ViewChild} from '@angular/core';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {TuiButton, TuiInput} from '@taiga-ui/core';
-import {TuiSelect} from '@taiga-ui/kit';
 import {BrowserQRCodeReader} from '@zxing/browser';
 import {apiErrorMessage} from '../core/api-error';
 import {CheckinApi, EventApi} from '../core/api.services';
 import {AccessPoint, CheckinResult, EventModel} from '../core/models';
 import {DisplayLabelPipe} from '../shared/display-label.pipe';
 import {FormErrorComponent} from '../shared/form-error.component';
+import {SelectFieldComponent, SelectOption} from '../shared/select-field.component';
 
 @Component({
   standalone: true,
-  imports: [ReactiveFormsModule, TuiButton, TuiInput, TuiSelect, DisplayLabelPipe, FormErrorComponent],
+  imports: [ReactiveFormsModule, TuiButton, TuiInput, SelectFieldComponent, DisplayLabelPipe, FormErrorComponent],
   template: `
     <div class="page-title"><div><h1>Portaria</h1><p>Leitura rápida com prevenção de acesso duplicado.</p></div></div>
     @if (error()) {<section class="error-panel" role="alert">{{error()}}</section>}
@@ -19,24 +19,22 @@ import {FormErrorComponent} from '../shared/form-error.component';
       <div class="panel">
         <form [formGroup]="form" novalidate>
           <label for="door-event">Evento</label>
-          <tui-textfield>
-            <select id="door-event" tuiSelect formControlName="eventId">
-              <option value="">Selecione o evento</option>
-              @for (event of events(); track event.id) {
-                <option [value]="event.id">{{event.name}}</option>
-              }
-            </select>
-          </tui-textfield>
+          <app-select-field
+            [control]="form.controls.eventId"
+            [options]="eventOptions()"
+            placeholder="Selecione o evento"
+            ariaLabel="Evento"
+            inputId="door-event"
+          />
 
           <label for="door-point">Portaria</label>
-          <tui-textfield>
-            <select id="door-point" tuiSelect formControlName="pointId">
-              <option value="">Selecione a portaria</option>
-              @for (point of points(); track point.id) {
-                <option [value]="point.id">{{point.name}}</option>
-              }
-            </select>
-          </tui-textfield>
+          <app-select-field
+            [control]="form.controls.pointId"
+            [options]="pointOptions()"
+            placeholder="Selecione a portaria"
+            ariaLabel="Portaria"
+            inputId="door-point"
+          />
 
           <video #video playsinline aria-label="Visualização da câmera para leitura do QR Code"></video>
           <div class="button-row">
@@ -84,6 +82,14 @@ export class DoorComponent {
   readonly error = signal('');
   readonly submitting = signal(false);
   readonly cameraActive = signal(false);
+  readonly eventOptions = computed<readonly SelectOption[]>(() => [
+    {value: '', label: 'Selecione o evento'},
+    ...this.events().map(event => ({value: event.id, label: event.name})),
+  ]);
+  readonly pointOptions = computed<readonly SelectOption[]>(() => [
+    {value: '', label: 'Selecione a portaria'},
+    ...this.points().map(point => ({value: point.id, label: point.name})),
+  ]);
   readonly form = this.fb.nonNullable.group({
     eventId: ['', Validators.required],
     pointId: ['', Validators.required],

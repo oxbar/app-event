@@ -1,7 +1,6 @@
-import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject, signal} from '@angular/core';
 import {FormBuilder, FormControl, ReactiveFormsModule, Validators} from '@angular/forms';
 import {TuiButton, TuiInput} from '@taiga-ui/core';
-import {TuiSelect} from '@taiga-ui/kit';
 import {apiErrorMessage} from '../core/api-error';
 import {CheckinApi, EventApi, InvitationApi, OrganizationApi} from '../core/api.services';
 import {
@@ -16,6 +15,7 @@ import {
 import {DisplayLabelPipe} from '../shared/display-label.pipe';
 import {FormErrorComponent} from '../shared/form-error.component';
 import {InputMaskDirective} from '../shared/input-mask.directive';
+import {SelectFieldComponent, SelectOption} from '../shared/select-field.component';
 import {brazilianPhoneValidator, strongPasswordValidator} from '../shared/validators';
 
 @Component({
@@ -24,7 +24,7 @@ import {brazilianPhoneValidator, strongPasswordValidator} from '../shared/valida
     ReactiveFormsModule,
     TuiButton,
     TuiInput,
-    TuiSelect,
+    SelectFieldComponent,
     DisplayLabelPipe,
     FormErrorComponent,
     InputMaskDirective,
@@ -38,13 +38,13 @@ import {brazilianPhoneValidator, strongPasswordValidator} from '../shared/valida
 
     <section class="panel operations-selector">
       <label for="operations-event">Evento</label>
-      <tui-textfield>
-        <select id="operations-event" tuiSelect [formControl]="eventControl">
-          @for (event of events(); track event.id) {
-            <option [value]="event.id">{{event.name}}</option>
-          }
-        </select>
-      </tui-textfield>
+      <app-select-field
+        [control]="eventControl"
+        [options]="eventOptions()"
+        placeholder="Selecione o evento"
+        ariaLabel="Evento"
+        inputId="operations-event"
+      />
     </section>
 
     <section class="operations-grid">
@@ -91,14 +91,15 @@ import {brazilianPhoneValidator, strongPasswordValidator} from '../shared/valida
           </div>
           <div class="form-field">
             <label for="member-role">Perfil de acesso</label>
-            <tui-textfield>
-              <select id="member-role" tuiSelect formControlName="role">
-                <option value="EVENT_MANAGER">Gestor de evento</option>
-                <option value="DOOR_STAFF">Equipe de portaria</option>
-                <option value="FINANCE">Financeiro</option>
-                <option value="VIEWER">Somente leitura</option>
-              </select>
-            </tui-textfield>
+            <app-select-field
+              [control]="memberForm.controls.role"
+              [options]="memberRoleOptions"
+              placeholder="Selecione o perfil"
+              ariaLabel="Perfil de acesso"
+              inputId="member-role"
+            />
+            <app-form-error [control]="memberForm.controls.role" label="Perfil de acesso" />
+            <p class="form-hint">Administradores podem gerenciar a organização. A equipe de portaria acessa somente o controle de entrada.</p>
           </div>
           <button tuiButton type="submit" [disabled]="!organizationId()">Adicionar membro</button>
         </form>
@@ -116,26 +117,24 @@ import {brazilianPhoneValidator, strongPasswordValidator} from '../shared/valida
         <form class="stack" [formGroup]="staffForm" (ngSubmit)="createStaff()" novalidate>
           <div class="form-field">
             <label for="staff-user">Membro</label>
-            <tui-textfield>
-              <select id="staff-user" tuiSelect formControlName="userId">
-                <option value="">Selecione o membro</option>
-                @for (member of members(); track member.userId) {
-                  <option [value]="member.userId">{{member.name}} · {{member.role | displayLabel}}</option>
-                }
-              </select>
-            </tui-textfield>
+            <app-select-field
+              [control]="staffForm.controls.userId"
+              [options]="memberOptions()"
+              placeholder="Selecione o membro"
+              ariaLabel="Membro"
+              inputId="staff-user"
+            />
             <app-form-error [control]="staffForm.controls.userId" label="Membro" />
           </div>
           <div class="form-field">
             <label for="staff-point">Portaria autorizada</label>
-            <tui-textfield>
-              <select id="staff-point" tuiSelect formControlName="accessPointId">
-                <option value="">Todas as portarias</option>
-                @for (point of points(); track point.id) {
-                  <option [value]="point.id">{{point.name}}</option>
-                }
-              </select>
-            </tui-textfield>
+            <app-select-field
+              [control]="staffForm.controls.accessPointId"
+              [options]="accessPointOptions()"
+              placeholder="Todas as portarias"
+              ariaLabel="Portaria autorizada"
+              inputId="staff-point"
+            />
           </div>
           <button tuiButton type="submit" [disabled]="!eventId()">Vincular funcionário</button>
         </form>
@@ -153,14 +152,13 @@ import {brazilianPhoneValidator, strongPasswordValidator} from '../shared/valida
         <form class="stack" [formGroup]="invitationForm" (ngSubmit)="createInvitation()" novalidate>
           <div class="form-field">
             <label for="invitation-ticket">Tipo de ingresso</label>
-            <tui-textfield>
-              <select id="invitation-ticket" tuiSelect formControlName="ticketTypeId">
-                <option value="">Selecione o ingresso</option>
-                @for (ticketType of ticketTypes(); track ticketType.id) {
-                  <option [value]="ticketType.id">{{ticketType.name}}</option>
-                }
-              </select>
-            </tui-textfield>
+            <app-select-field
+              [control]="invitationForm.controls.ticketTypeId"
+              [options]="ticketTypeOptions()"
+              placeholder="Selecione o ingresso"
+              ariaLabel="Tipo de ingresso"
+              inputId="invitation-ticket"
+            />
             <app-form-error [control]="invitationForm.controls.ticketTypeId" label="Tipo de ingresso" />
           </div>
           <div class="form-field">
@@ -215,6 +213,33 @@ export class OperationsComponent {
   readonly eventControl = new FormControl('', {nonNullable: true});
   readonly error = signal('');
   readonly organizationId = signal('');
+
+  readonly memberRoleOptions: readonly SelectOption[] = [
+    {value: 'ORGANIZER_ADMIN', label: 'Administrador da organização'},
+    {value: 'EVENT_MANAGER', label: 'Gestor de evento'},
+    {value: 'DOOR_STAFF', label: 'Equipe de portaria'},
+    {value: 'FINANCE', label: 'Financeiro'},
+    {value: 'VIEWER', label: 'Somente leitura'},
+  ];
+
+  readonly eventOptions = computed<readonly SelectOption[]>(() =>
+    this.events().map(event => ({value: event.id, label: event.name})),
+  );
+  readonly memberOptions = computed<readonly SelectOption[]>(() => [
+    {value: '', label: 'Selecione o membro'},
+    ...this.members().map(member => ({
+      value: member.userId,
+      label: `${member.name} · ${this.roleLabel(member.role)}`,
+    })),
+  ]);
+  readonly accessPointOptions = computed<readonly SelectOption[]>(() => [
+    {value: '', label: 'Todas as portarias'},
+    ...this.points().map(point => ({value: point.id, label: point.name})),
+  ]);
+  readonly ticketTypeOptions = computed<readonly SelectOption[]>(() => [
+    {value: '', label: 'Selecione o ingresso'},
+    ...this.ticketTypes().map(type => ({value: type.id, label: `${type.name} · ${type.category}`})),
+  ]);
 
   readonly pointForm = this.formBuilder.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
@@ -286,6 +311,10 @@ export class OperationsComponent {
       next: value => this.members.set(value),
       error: error => this.error.set(apiErrorMessage(error, 'Não foi possível carregar os membros.')),
     });
+  }
+
+  private roleLabel(role: string): string {
+    return this.memberRoleOptions.find(option => option.value === role)?.label ?? role;
   }
 
   createPoint(): void {

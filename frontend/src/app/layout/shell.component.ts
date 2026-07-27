@@ -1,17 +1,17 @@
-import {ChangeDetectionStrategy, Component, DestroyRef, HostListener, inject, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, DestroyRef, HostListener, inject, signal} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {FormControl, ReactiveFormsModule} from '@angular/forms';
 import {NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet} from '@angular/router';
 import {TuiButton, TuiInput} from '@taiga-ui/core';
-import {TuiSelect} from '@taiga-ui/kit';
 import {filter} from 'rxjs';
 import {apiErrorMessage} from '../core/api-error';
 import {AuthService} from '../core/auth.service';
 import {ThemeService} from '../core/theme.service';
+import {SelectFieldComponent, SelectOption} from '../shared/select-field.component';
 
 @Component({
   standalone: true,
-  imports: [ReactiveFormsModule, RouterOutlet, RouterLink, RouterLinkActive, TuiButton, TuiInput, TuiSelect],
+  imports: [ReactiveFormsModule, RouterOutlet, RouterLink, RouterLinkActive, TuiButton, TuiInput, SelectFieldComponent],
   template: `
     <a class="skip-link" href="#main-content">Ir para o conteúdo principal</a>
     <div class="shell" [class.sidebar-collapsed]="sidebarCollapsed()">
@@ -69,13 +69,14 @@ import {ThemeService} from '../core/theme.service';
           </button>
 
           @if (auth.organizationOptions().length > 1) {
-            <tui-textfield class="organization-switcher">
-              <select tuiSelect [formControl]="organizationControl" aria-label="Organização atual">
-                @for (organization of auth.organizationOptions(); track organization.id) {
-                  <option [value]="organization.id">{{organization.name}}</option>
-                }
-              </select>
-            </tui-textfield>
+            <app-select-field
+              class="organization-switcher"
+              [control]="organizationControl"
+              [options]="organizationOptions()"
+              placeholder="Selecione a organização"
+              ariaLabel="Organização atual"
+              inputId="organization-switcher"
+            />
           }
 
           @if (error()) {<small class="header-error" role="alert">{{error()}}</small>}
@@ -107,6 +108,9 @@ export class ShellComponent {
   readonly mobileMenuOpen = signal(false);
   readonly sidebarCollapsed = signal(localStorage.getItem(this.sidebarKey) === 'true');
   readonly error = signal('');
+  readonly organizationOptions = computed<readonly SelectOption[]>(() =>
+    this.auth.organizationOptions().map(organization => ({value: organization.id, label: organization.name})),
+  );
   readonly organizationControl = new FormControl(
     this.auth.user()?.organizationId ?? '',
     {nonNullable: true},

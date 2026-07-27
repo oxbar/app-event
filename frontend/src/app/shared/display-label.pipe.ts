@@ -32,6 +32,8 @@ const LABELS: Record<string, string> = {
   CANCELLED: 'Cancelado',
   CLOSED: 'Encerrado',
   COMMON: 'Comum',
+  CABIN: 'Camarote',
+  BACKSTAGE: 'Backstage',
   COURTESY: 'Cortesia',
   CREATED: 'Criado',
   CREDIT_CARD: 'Cartão de crédito',

@@ -13,3 +13,11 @@ export function apiErrorMessage(error: unknown, fallback: string): string {
   if (error.status === 403) return 'Você não possui permissão para acessar este recurso.';
   return fallback;
 }
+
+export function apiErrorCode(error: unknown): string | null {
+  if (!(error instanceof HttpErrorResponse)) return null;
+  const payload = error.error as Partial<ApiError> | null;
+  return payload && typeof payload === 'object' && typeof payload.code === 'string'
+    ? payload.code
+    : null;
+}
