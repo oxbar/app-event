@@ -1,0 +1,1 @@
+import {Injectable,signal} from '@angular/core';@Injectable({providedIn:'root'}) export class ThemeService{private key='event-access-theme';readonly dark=signal(localStorage.getItem(this.key)==='dark');toggle(){this.dark.update(v=>!v);localStorage.setItem(this.key,this.dark()?'dark':'light')}}

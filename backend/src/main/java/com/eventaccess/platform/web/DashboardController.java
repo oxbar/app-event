@@ -1,0 +1,2 @@
+package com.eventaccess.platform.web;import com.eventaccess.platform.security.AppPrincipal;import com.eventaccess.platform.service.DashboardService;import org.springframework.security.core.annotation.AuthenticationPrincipal;import org.springframework.web.bind.annotation.*;
+@RestController @RequestMapping("/api/dashboard") public class DashboardController {private final DashboardService s;public DashboardController(DashboardService s){this.s=s;}@GetMapping("/summary") DashboardService.Summary summary(@AuthenticationPrincipal AppPrincipal p){return s.summary(p);}}

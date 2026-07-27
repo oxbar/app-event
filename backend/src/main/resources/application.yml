@@ -1,0 +1,55 @@
+spring:
+  application:
+    name: event-access-platform
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/event_access}
+    username: ${SPRING_DATASOURCE_USERNAME:event_access}
+    password: ${SPRING_DATASOURCE_PASSWORD:event_access}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        format_sql: true
+  flyway:
+    enabled: true
+  jackson:
+    default-property-inclusion: non_null
+  mvc:
+    problemdetails:
+      enabled: false
+server:
+  port: 8080
+  forward-headers-strategy: framework
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+app:
+  environment: ${APP_ENVIRONMENT:development}
+  base-url: ${APP_BASE_URL:http://localhost:4200}
+  backend-base-url: ${BACKEND_BASE_URL:http://localhost:8080}
+  jwt:
+    secret: ${JWT_SECRET:change-this-secret-change-this-secret-change-this-secret}
+    access-expiration-seconds: ${JWT_ACCESS_EXPIRATION:900}
+    refresh-expiration-seconds: ${JWT_REFRESH_EXPIRATION:604800}
+  qr:
+    secret: ${QR_SECRET:change-this-qr-secret-change-this-qr-secret-change-this}
+  payment-provider: ${PAYMENT_PROVIDER:FAKE}
+  data-encryption-secret: ${DATA_ENCRYPTION_SECRET:change-this-data-encryption-secret-change-this}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
+  rate-limit:
+    max-requests: ${PUBLIC_RATE_LIMIT_MAX:60}
+    window-seconds: ${PUBLIC_RATE_LIMIT_WINDOW:60}
+logging:
+  pattern:
+    level: "%5p [traceId=%X{traceId:-}]"

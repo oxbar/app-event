@@ -1,0 +1,63 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-event_access}
+      POSTGRES_USER: ${POSTGRES_USER:-event_access}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-event_access}
+    volumes:
+      - event_access_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-event_access} -d ${POSTGRES_DB:-event_access}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    networks: [event-access]
+
+  backend:
+    build: ./backend
+    environment:
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/event_access}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-event_access}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-event_access}
+      JWT_SECRET: ${JWT_SECRET:-change-this-secret-change-this-secret-change-this-secret}
+      JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION:-900}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-604800}
+      QR_SECRET: ${QR_SECRET:-change-this-qr-secret-change-this-qr-secret-change-this}
+      DATA_ENCRYPTION_SECRET: ${DATA_ENCRYPTION_SECRET:-change-this-data-encryption-secret-change-this}
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-FAKE}
+      APP_ENVIRONMENT: ${APP_ENVIRONMENT:-development}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:4200}
+      BACKEND_BASE_URL: ${BACKEND_BASE_URL:-http://localhost:8080}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:4200}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health/readiness | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    restart: unless-stopped
+    networks: [event-access]
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [event-access]
+
+volumes:
+  event_access_postgres:
+
+networks:
+  event-access:
+    driver: bridge

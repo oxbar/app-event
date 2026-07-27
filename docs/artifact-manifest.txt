@@ -1,0 +1,8 @@
+Event Access Platform artifact manifest
+Generated: 2026-07-27
+Files: 159
+Java source files: 90
+Angular/TypeScript source files: 25
+Flyway migrations: 1
+Backend tests: 3
+Frontend specs: 1

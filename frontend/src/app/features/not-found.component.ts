@@ -1,0 +1,1 @@
+import {Component} from '@angular/core';import {RouterLink} from '@angular/router';import {TuiButton} from '@taiga-ui/core';@Component({standalone:true,imports:[RouterLink,TuiButton],template:`<section class="empty"><h1>404</h1><p>Página não encontrada.</p><a tuiButton routerLink="/dashboard">Voltar</a></section>`})export class NotFoundComponent{}

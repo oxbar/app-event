@@ -1,0 +1,16 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+app:
+  environment: test
+  jwt:
+    secret: test-secret-test-secret-test-secret-test-secret
+    access-expiration-seconds: 900
+    refresh-expiration-seconds: 604800
+  qr:
+    secret: test-qr-secret-test-qr-secret-test-qr-secret
+  cors:
+    allowed-origins: http://localhost:4200

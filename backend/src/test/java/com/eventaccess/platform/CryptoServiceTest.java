@@ -1,0 +1,2 @@
+package com.eventaccess.platform;import com.eventaccess.platform.service.CryptoService;import org.junit.jupiter.api.*;import java.util.UUID;import static org.assertj.core.api.Assertions.*;
+class CryptoServiceTest {@Test void tokenIsDeterministicAndOpaque(){var c=new CryptoService("0123456789012345678901234567890123456789");var id=UUID.randomUUID();var a=c.ticketToken(id,"TKT-1");assertThat(a).hasSizeGreaterThanOrEqualTo(43).doesNotContain(id.toString()).isEqualTo(c.ticketToken(id,"TKT-1"));assertThat(c.sha256(a)).hasSize(64);}}
