@@ -61,22 +61,31 @@ import {brazilianPhoneValidator, cpfValidator} from '../shared/validators';
                     class="ticket-option"
                     [class.selected]="selected()?.id === ticketType.id"
                     [disabled]="ticketType.availableQuantity === 0"
+                    [attr.aria-pressed]="selected()?.id === ticketType.id"
                     type="button"
                     (click)="select(ticketType)"
                   >
-                    <span class="ticket-option__color" [style.background]="ticketType.wristbandColorHex || '#6b4eff'"></span>
-                    <span class="ticket-option__content">
+                    <span
+                      class="ticket-option__color"
+                      [style.background]="ticketType.wristbandColorHex || '#6b4eff'"
+                      aria-hidden="true"
+                    ></span>
+                    <div class="ticket-option__content">
                       <strong>{{ticketType.name}}</strong>
-                      <small>{{ticketType.availableQuantity}} disponíveis</small>
-                      @if (ticketType.wristbandLabel) {
-                        <small>{{ticketType.wristbandLabel}}</small>
-                      }
-                    </span>
-                    <span class="ticket-option__price">
+                      <div class="ticket-option__details">
+                        <span>{{ticketType.availableQuantity}} disponíveis</span>
+                        @if (ticketType.wristbandLabel) {
+                          <span>{{ticketType.wristbandLabel}}</span>
+                        }
+                      </div>
+                    </div>
+                    <div class="ticket-option__price">
                       <small>por ingresso</small>
                       <b>{{ticketType.price + ticketType.serviceFee | currency:'BRL'}}</b>
+                    </div>
+                    <span class="ticket-option__check" aria-hidden="true">
+                      @if (selected()?.id === ticketType.id) { ✓ }
                     </span>
-                    <span class="ticket-option__check" aria-hidden="true">✓</span>
                   </button>
                 } @empty {
                   <div class="checkout-empty">Nenhum ingresso disponível para venda neste momento.</div>
@@ -158,7 +167,7 @@ import {brazilianPhoneValidator, cpfValidator} from '../shared/validators';
                 <div class="error-panel" role="alert">{{error()}}</div>
               }
 
-              <button class="checkout-submit" tuiButton type="submit" [disabled]="loading() || !selected()">
+              <button class="checkout-submit" tuiButton type="submit" [disabled]="loading() || !selected() || form.invalid">
                 {{loading() ? 'Gerando cobrança Pix...' : 'Continuar para o Pix'}}
               </button>
               <p class="checkout-security-note">O ingresso será emitido somente após a confirmação do pagamento.</p>

@@ -1,0 +1,3 @@
+Event Access Platform v6.2
+Base: v6.1 (Asaas Sandbox + hotfix backend)
+Atualização: checkout público redesenhado, máscaras, validações, autofill e responsividade.
