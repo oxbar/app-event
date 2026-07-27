@@ -1,13 +1,15 @@
 import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
+import {FormControl, ReactiveFormsModule} from '@angular/forms';
 import {RouterLink, RouterLinkActive, RouterOutlet} from '@angular/router';
 import {TuiButton, TuiInput} from '@taiga-ui/core';
 import {TuiSelect} from '@taiga-ui/kit';
+import {apiErrorMessage} from '../core/api-error';
 import {AuthService} from '../core/auth.service';
 import {ThemeService} from '../core/theme.service';
 
 @Component({
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, TuiButton, TuiInput, TuiSelect],
+  imports: [ReactiveFormsModule, RouterOutlet, RouterLink, RouterLinkActive, TuiButton, TuiInput, TuiSelect],
   template: `
     <div class="shell">
       <aside [class.open]="menu()">
@@ -43,13 +45,14 @@ import {ThemeService} from '../core/theme.service';
           <button tuiButton appearance="flat" type="button" (click)="toggleMenu()">☰</button>
           @if (auth.organizationOptions().length > 1) {
             <tui-textfield class="organization-switcher">
-              <select tuiSelect [value]="auth.user()?.organizationId" (change)="switchOrganization($event)">
+              <select tuiSelect [formControl]="organizationControl">
                 @for (organization of auth.organizationOptions(); track organization.id) {
                   <option [value]="organization.id">{{organization.name}}</option>
                 }
               </select>
             </tui-textfield>
           }
+          @if (error()) {<small class="header-error">{{error()}}</small>}
           <div class="user-summary"><strong>{{auth.user()?.name}}</strong><small>{{auth.user()?.email}}</small></div>
           <button tuiButton appearance="secondary" type="button" (click)="theme.toggle()">
             {{theme.dark() ? 'Tema claro' : 'Tema escuro'}}
@@ -66,18 +69,34 @@ export class ShellComponent {
   readonly auth = inject(AuthService);
   readonly theme = inject(ThemeService);
   readonly menu = signal(false);
+  readonly error = signal('');
+  readonly organizationControl = new FormControl(
+    this.auth.user()?.organizationId ?? '',
+    {nonNullable: true},
+  );
 
   constructor() {
     this.auth.loadOrganizations();
+    this.organizationControl.valueChanges.subscribe(organizationId => {
+      if (!organizationId || organizationId === this.auth.user()?.organizationId) return;
+      this.switchOrganization(organizationId);
+    });
   }
 
   toggleMenu(): void {
     this.menu.update(value => !value);
   }
 
-  switchOrganization(event: Event): void {
-    const organizationId = (event.target as HTMLSelectElement).value;
-    if (!organizationId || organizationId === this.auth.user()?.organizationId) return;
-    this.auth.switchOrganization(organizationId).subscribe(() => window.location.assign('/dashboard'));
+  private switchOrganization(organizationId: string): void {
+    this.error.set('');
+    this.organizationControl.disable({emitEvent: false});
+    this.auth.switchOrganization(organizationId).subscribe({
+      next: () => window.location.assign('/dashboard'),
+      error: error => {
+        this.organizationControl.setValue(this.auth.user()?.organizationId ?? '', {emitEvent: false});
+        this.organizationControl.enable({emitEvent: false});
+        this.error.set(apiErrorMessage(error, 'Não foi possível trocar de organização.'));
+      },
+    });
   }
 }

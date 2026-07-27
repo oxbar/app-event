@@ -1,0 +1,46 @@
+VALIDAÇÃO ESTRUTURAL
+OK   arquivo backend/pom.xml
+OK   arquivo backend/Dockerfile
+OK   arquivo frontend/package.json
+OK   arquivo frontend/angular.json
+OK   arquivo frontend/Dockerfile
+OK   arquivo frontend/nginx.conf
+OK   arquivo docker-compose.yml
+OK   arquivo .env.example
+OK   arquivo README.md
+OK   arquivo docs/architecture.md
+OK   arquivo docs/database.md
+OK   arquivo docs/api.md
+OK   arquivo docs/payment-flow.md
+OK   arquivo docs/checkin-flow.md
+OK   sem @angular/material
+OK   sem bootstrap
+OK   sem primeng
+OK   sem @nebular/theme
+OK   sem ng-zorro-antd
+OK   URLs relativas no Angular
+OK   sem TODO
+OK   sem UnsupportedOperationException
+OK   sem console.log(
+OK   tabela organizations
+OK   tabela users
+OK   tabela organization_members
+OK   tabela events
+OK   tabela ticket_types
+OK   tabela attendees
+OK   tabela orders
+OK   tabela order_items
+OK   tabela payments
+OK   tabela payment_webhooks
+OK   tabela tickets
+OK   tabela invitations
+OK   tabela access_points
+OK   tabela event_staff
+OK   tabela checkins
+OK   tabela refunds
+OK   tabela audit_logs
+OK   check-in atômico
+OK   token de QR opaco
+OK   isolamento por organização
+
+43/43 verificações aprovadas

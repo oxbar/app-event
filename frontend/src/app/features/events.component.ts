@@ -1,19 +1,27 @@
 import {CurrencyPipe, DatePipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
-import {TuiButton, TuiInput} from '@taiga-ui/core';
+import {TuiButton, TuiInput, TuiLoader} from '@taiga-ui/core';
 import {TuiPagination} from '@taiga-ui/kit';
 import {EventApi} from '../core/api.services';
+import {apiErrorMessage} from '../core/api-error';
 import {EventModel, TicketType} from '../core/models';
 
 @Component({
   standalone: true,
-  imports: [DatePipe, CurrencyPipe, ReactiveFormsModule, TuiButton, TuiInput, TuiPagination],
+  imports: [DatePipe, CurrencyPipe, ReactiveFormsModule, TuiButton, TuiInput, TuiLoader, TuiPagination],
   template: `
     <div class="page-title">
       <div><h1>Eventos</h1><p>Crie eventos, publique vendas e configure categorias.</p></div>
       <button tuiButton type="button" (click)="toggleForm()">Novo evento</button>
     </div>
+
+    @if (error()) {
+      <section class="error-panel" role="alert">
+        <p>{{error()}}</p>
+        <button tuiButton type="button" (click)="load()">Tentar novamente</button>
+      </section>
+    }
 
     @if (showForm()) {
       <section class="panel">
@@ -24,32 +32,39 @@ import {EventModel, TicketType} from '../core/models';
           <tui-textfield><input tuiInput type="datetime-local" formControlName="startsAt" /></tui-textfield>
           <tui-textfield><input tuiInput type="datetime-local" formControlName="endsAt" /></tui-textfield>
           <tui-textfield><input tuiInput type="number" placeholder="Capacidade" formControlName="capacity" /></tui-textfield>
-          <button tuiButton type="submit" [disabled]="form.invalid">Criar</button>
+          <button tuiButton type="submit" [disabled]="form.invalid || saving()">
+            {{saving() ? 'Criando...' : 'Criar'}}
+          </button>
         </form>
       </section>
     }
 
-    <section class="card-list">
-      @for (event of events(); track event.id) {
-        <article class="event-card">
-          <div>
-            <span class="status">{{event.status}}</span>
-            <h2>{{event.name}}</h2>
-            <p>{{event.venueName}} · {{event.city}}/{{event.state}}</p>
-            <small>{{event.startsAt | date:'dd/MM/yyyy HH:mm'}}</small>
-          </div>
-          <div class="button-row">
-            <button tuiButton appearance="secondary" type="button" (click)="manage(event)">Ingressos</button>
-            @if (event.status === 'DRAFT') {
-              <button tuiButton type="button" (click)="publish(event.id)">Publicar</button>
-            }
-            <a tuiButton appearance="flat" [href]="'/e/' + event.slug" target="_blank">Checkout</a>
-          </div>
-        </article>
-      } @empty {
-        <div class="empty">Nenhum evento encontrado.</div>
-      }
-    </section>
+    @if (loading()) {
+      <tui-loader />
+    } @else {
+      <section class="card-list">
+        @for (event of events(); track event.id) {
+          <article class="event-card">
+            <div>
+              <span class="status">{{event.status}}</span>
+              <h2>{{event.name}}</h2>
+              <p>{{event.venueName}} · {{event.city}}/{{event.state}}</p>
+              <small>{{event.startsAt | date:'dd/MM/yyyy HH:mm'}}</small>
+            </div>
+            <div class="button-row">
+              <button tuiButton appearance="secondary" type="button" (click)="manage(event)">Ingressos</button>
+              @if (event.status === 'DRAFT') {
+                <button tuiButton type="button" (click)="publish(event.id)">Publicar</button>
+              }
+              <a tuiButton appearance="flat" [href]="'/e/' + event.slug" target="_blank">Checkout</a>
+            </div>
+          </article>
+        } @empty {
+          <div class="empty">Nenhum evento encontrado.</div>
+        }
+      </section>
+    }
+
     @if (totalPages() > 1) {
       <tui-pagination [index]="pageIndex" [length]="totalPages()" (indexChange)="changePage($event)" />
     }
@@ -64,7 +79,10 @@ import {EventModel, TicketType} from '../core/models';
           @for (type of types(); track type.id) {
             <article class="ticket-type-card">
               <span class="wristband-dot" [style.background]="type.wristbandColorHex"></span>
-              <div><strong>{{type.name}}</strong><small>{{type.wristbandLabel}} · {{type.availableQuantity}} disponíveis</small></div>
+              <div>
+                <strong>{{type.name}}</strong>
+                <small>{{type.wristbandLabel}} · {{type.availableQuantity}} disponíveis</small>
+              </div>
               <b>{{type.price + type.serviceFee | currency:'BRL'}}</b>
             </article>
           } @empty {
@@ -80,7 +98,9 @@ import {EventModel, TicketType} from '../core/models';
           <tui-textfield><input tuiInput type="number" placeholder="Máximo por pedido" formControlName="maxPerOrder" /></tui-textfield>
           <tui-textfield><input tuiInput placeholder="Nome da pulseira" formControlName="wristbandLabel" /></tui-textfield>
           <tui-textfield><input tuiInput placeholder="#FFFFFF" formControlName="wristbandColorHex" /></tui-textfield>
-          <button tuiButton type="submit" [disabled]="ticketForm.invalid">Adicionar ingresso</button>
+          <button tuiButton type="submit" [disabled]="ticketForm.invalid || saving()">
+            {{saving() ? 'Salvando...' : 'Adicionar ingresso'}}
+          </button>
         </form>
       </section>
     }
@@ -95,6 +115,9 @@ export class EventsComponent {
   readonly selected = signal<EventModel | null>(null);
   readonly types = signal<TicketType[]>([]);
   readonly totalPages = signal(0);
+  readonly loading = signal(false);
+  readonly saving = signal(false);
+  readonly error = signal('');
   pageIndex = 0;
 
   readonly form = this.fb.nonNullable.group({
@@ -123,10 +146,21 @@ export class EventsComponent {
   }
 
   load(pageIndex = this.pageIndex): void {
-    this.api.list(pageIndex).subscribe(page => {
-      this.pageIndex = page.number;
-      this.events.set(page.content);
-      this.totalPages.set(page.totalPages);
+    this.loading.set(true);
+    this.error.set('');
+    this.api.list(pageIndex).subscribe({
+      next: page => {
+        this.pageIndex = page.number;
+        this.events.set(page.content);
+        this.totalPages.set(page.totalPages);
+        this.loading.set(false);
+      },
+      error: error => {
+        this.events.set([]);
+        this.totalPages.set(0);
+        this.error.set(apiErrorMessage(error, 'Não foi possível carregar os eventos.'));
+        this.loading.set(false);
+      },
     });
   }
 
@@ -139,34 +173,69 @@ export class EventsComponent {
   }
 
   create(): void {
+    if (this.form.invalid || this.saving()) return;
     const value = this.form.getRawValue();
+    this.saving.set(true);
+    this.error.set('');
     this.api.create({
       ...value,
       startsAt: new Date(value.startsAt).toISOString(),
       endsAt: new Date(value.endsAt).toISOString(),
       country: 'Brasil',
       requireDocument: false,
-    }).subscribe(() => {
-      this.showForm.set(false);
-      this.form.reset({name: '', venueName: '', startsAt: '', endsAt: '', capacity: 600});
-      this.load();
+    }).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.showForm.set(false);
+        this.form.reset({name: '', venueName: '', startsAt: '', endsAt: '', capacity: 600});
+        this.load();
+      },
+      error: error => {
+        this.error.set(apiErrorMessage(error, 'Não foi possível criar o evento.'));
+        this.saving.set(false);
+      },
     });
   }
 
   manage(event: EventModel): void {
     this.selected.set(event);
-    this.api.types(event.id).subscribe(types => this.types.set(types));
+    this.error.set('');
+    this.api.types(event.id).subscribe({
+      next: types => this.types.set(types),
+      error: error => this.error.set(apiErrorMessage(error, 'Não foi possível carregar os tipos de ingresso.')),
+    });
   }
 
   createType(): void {
     const event = this.selected();
-    if (!event) return;
-    this.api.createType(event.id, this.ticketForm.getRawValue()).subscribe(() => {
-      this.api.types(event.id).subscribe(types => this.types.set(types));
+    if (!event || this.ticketForm.invalid || this.saving()) return;
+    this.saving.set(true);
+    this.error.set('');
+    this.api.createType(event.id, this.ticketForm.getRawValue()).subscribe({
+      next: () => {
+        this.api.types(event.id).subscribe({
+          next: types => {
+            this.types.set(types);
+            this.saving.set(false);
+          },
+          error: error => {
+            this.error.set(apiErrorMessage(error, 'O ingresso foi criado, mas a lista não pôde ser atualizada.'));
+            this.saving.set(false);
+          },
+        });
+      },
+      error: error => {
+        this.error.set(apiErrorMessage(error, 'Não foi possível criar o tipo de ingresso.'));
+        this.saving.set(false);
+      },
     });
   }
 
   publish(id: string): void {
-    this.api.publish(id).subscribe(() => this.load());
+    this.error.set('');
+    this.api.publish(id).subscribe({
+      next: () => this.load(),
+      error: error => this.error.set(apiErrorMessage(error, 'Não foi possível publicar o evento.')),
+    });
   }
 }

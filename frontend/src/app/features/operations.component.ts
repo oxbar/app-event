@@ -1,8 +1,9 @@
 import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
-import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
+import {FormBuilder, FormControl, ReactiveFormsModule, Validators} from '@angular/forms';
 import {TuiButton, TuiInput} from '@taiga-ui/core';
 import {TuiSelect} from '@taiga-ui/kit';
 import {EventApi, InvitationApi, OrganizationApi, CheckinApi} from '../core/api.services';
+import {apiErrorMessage} from '../core/api-error';
 import {
   AccessPoint,
   EventModel,
@@ -21,10 +22,12 @@ import {
       <div><h1>Equipe, portarias e convites</h1><p>Configuração operacional por evento.</p></div>
     </div>
 
+    @if (error()) {<section class="error-panel" role="alert">{{error()}}</section>}
+
     <section class="panel operations-selector">
       <label>Evento</label>
       <tui-textfield>
-        <select tuiSelect [value]="eventId()" (change)="selectEvent($any($event.target).value)">
+        <select tuiSelect [formControl]="eventControl">
           @for (event of events(); track event.id) {
             <option [value]="event.id">{{event.name}}</option>
           }
@@ -143,6 +146,8 @@ export class OperationsComponent {
   readonly invitations = signal<Invitation[]>([]);
   readonly ticketTypes = signal<TicketType[]>([]);
   readonly eventId = signal('');
+  readonly eventControl = new FormControl('', {nonNullable: true});
+  readonly error = signal('');
   readonly organizationId = signal('');
 
   readonly pointForm = this.formBuilder.nonNullable.group({
@@ -168,29 +173,53 @@ export class OperationsComponent {
   });
 
   constructor() {
-    this.organizationApi.list().subscribe(page => {
-      this.organizations.set(page.content);
-      const organizationId = page.content[0]?.id ?? '';
-      this.organizationId.set(organizationId);
-      if (organizationId) this.loadMembers();
-    });
-    this.eventApi.list(0, 100).subscribe(page => {
-      this.events.set(page.content);
-      const eventId = page.content[0]?.id ?? '';
+    this.eventControl.valueChanges.subscribe(eventId => {
       if (eventId) this.selectEvent(eventId);
+    });
+    this.organizationApi.list().subscribe({
+      next: page => {
+        this.organizations.set(page.content);
+        const organizationId = page.content[0]?.id ?? '';
+        this.organizationId.set(organizationId);
+        if (organizationId) this.loadMembers();
+      },
+      error: error => this.error.set(apiErrorMessage(error, 'Não foi possível carregar as organizações.')),
+    });
+    this.eventApi.list(0, 100).subscribe({
+      next: page => {
+        this.events.set(page.content);
+        this.eventControl.setValue(page.content[0]?.id ?? '');
+      },
+      error: error => this.error.set(apiErrorMessage(error, 'Não foi possível carregar os eventos.')),
     });
   }
 
   selectEvent(eventId: string): void {
     this.eventId.set(eventId);
-    this.checkinApi.points(eventId).subscribe(value => this.points.set(value));
-    this.organizationApi.staff(eventId).subscribe(value => this.staff.set(value));
-    this.invitationApi.list(eventId).subscribe(value => this.invitations.set(value));
-    this.eventApi.types(eventId).subscribe(value => this.ticketTypes.set(value));
+    this.error.set('');
+    this.checkinApi.points(eventId).subscribe({
+      next: value => this.points.set(value),
+      error: error => this.error.set(apiErrorMessage(error, 'Não foi possível carregar as portarias.')),
+    });
+    this.organizationApi.staff(eventId).subscribe({
+      next: value => this.staff.set(value),
+      error: error => this.error.set(apiErrorMessage(error, 'Não foi possível carregar os funcionários.')),
+    });
+    this.invitationApi.list(eventId).subscribe({
+      next: value => this.invitations.set(value),
+      error: error => this.error.set(apiErrorMessage(error, 'Não foi possível carregar os convites.')),
+    });
+    this.eventApi.types(eventId).subscribe({
+      next: value => this.ticketTypes.set(value),
+      error: error => this.error.set(apiErrorMessage(error, 'Não foi possível carregar os tipos de ingresso.')),
+    });
   }
 
   loadMembers(): void {
-    this.organizationApi.members(this.organizationId()).subscribe(value => this.members.set(value));
+    this.organizationApi.members(this.organizationId()).subscribe({
+      next: value => this.members.set(value),
+      error: error => this.error.set(apiErrorMessage(error, 'Não foi possível carregar os membros.')),
+    });
   }
 
   createPoint(): void {

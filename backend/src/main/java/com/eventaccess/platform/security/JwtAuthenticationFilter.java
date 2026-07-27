@@ -28,12 +28,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (authorization != null && authorization.startsWith("Bearer ")
                 && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
-                String token = authorization.substring(7);
-                var principal = principals.loadForOrganization(jwt.subject(token), jwt.organizationId(token));
-                SecurityContextHolder.getContext().setAuthentication(
-                        new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
-            } catch (Exception ignored) {
+                String token = authorization.substring(7).trim();
+                if (!token.isEmpty()) {
+                    var claims = jwt.claims(token);
+                    var principal = principals.loadForOrganization(
+                            claims.getSubject(),
+                            java.util.UUID.fromString(claims.get("org", String.class)));
+                    SecurityContextHolder.getContext().setAuthentication(
+                            new UsernamePasswordAuthenticationToken(
+                                    principal, null, principal.getAuthorities()));
+                }
+            } catch (Exception exception) {
+                // Continue as anonymous. Public endpoints remain accessible and protected endpoints
+                // are converted to a standardized 401 by SecurityConfig's authentication entry point.
                 SecurityContextHolder.clearContext();
+                request.setAttribute("jwtAuthenticationFailure", exception.getClass().getSimpleName());
             }
         }
         chain.doFilter(request, response);
