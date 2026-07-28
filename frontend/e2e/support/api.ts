@@ -1,7 +1,15 @@
 import {APIRequestContext, expect, request} from '@playwright/test';
 import {ORGANIZER} from './data';
 
-const API = process.env['E2E_API_URL'] ?? 'http://localhost:8080';
+/**
+ * Por padrão, as chamadas auxiliares da suíte passam pelo mesmo endereço do
+ * frontend. Assim, /api usa o proxy do Angular ou do Nginx e não depende de a
+ * porta 8080 do host estar livre. Para acessar o backend diretamente, defina
+ * E2E_API_URL explicitamente.
+ */
+export const E2E_API_URL = normalizeBaseUrl(
+  process.env['E2E_API_URL'] ?? process.env['E2E_BASE_URL'] ?? 'http://localhost:4200',
+);
 
 export interface EventView {
   id: string;
@@ -41,7 +49,7 @@ export class AdminApi {
   ) {}
 
   static async login(email = ORGANIZER.email, password = ORGANIZER.password): Promise<AdminApi> {
-    const context = await request.newContext({baseURL: API});
+    const context = await request.newContext({baseURL: E2E_API_URL});
     const response = await context.post('/api/auth/login', {data: {email, password}});
 
     if (!response.ok()) {
@@ -51,7 +59,7 @@ export class AdminApi {
       // O que resolve o problema é o código HTTP e a dica do que costuma causá-lo.
       throw new Error(
         [
-          `Login recusado para ${email} em ${API}/api/auth/login`,
+          `Login recusado para ${email} em ${E2E_API_URL}/api/auth/login`,
           `HTTP ${status} — ${body || '(corpo vazio)'}`,
           '',
           hintFor(status),
@@ -205,4 +213,8 @@ function hintFor(status: number): string {
 
 async function failureText(response: {status(): number; text(): Promise<string>}, action: string): Promise<string> {
   return `Falha ao ${action} — HTTP ${response.status()}: ${await response.text()}`;
+}
+
+function normalizeBaseUrl(value: string): string {
+  return value.replace(/\/+$/, '');
 }

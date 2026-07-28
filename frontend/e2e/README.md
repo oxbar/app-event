@@ -46,7 +46,12 @@ npm run e2e:report            # relatório HTML da última execução
 npm run lint:e2e              # só checagem de tipos, sem navegador
 ```
 
-Endereços diferentes:
+Por padrão, tanto o navegador quanto o cliente auxiliar da suíte usam
+`http://localhost:4200`. As chamadas `/api` passam pelo proxy do Angular/Nginx.
+Isso evita atingir por engano outra aplicação que esteja ocupando a porta 8080
+do host.
+
+Para usar endereços diferentes ou acessar o backend diretamente:
 
 ```bash
 E2E_BASE_URL=http://localhost:8081 E2E_API_URL=http://localhost:9090 npm run e2e

@@ -1,3 +1,4 @@
+import {E2E_API_URL} from './support/api';
 import {scenario} from './support/data';
 import {expect, loginAs, test} from './support/fixtures';
 
@@ -41,7 +42,7 @@ test.describe('Perfis e permissões', () => {
     });
     test.skip(!token, 'Token não exposto no storage sob esta configuração.');
 
-    const response = await request.get('http://localhost:8080/api/payments', {
+    const response = await request.get(`${E2E_API_URL}/api/payments`, {
       headers: {Authorization: `Bearer ${token}`},
     });
     expect(response.status(), 'a API deveria recusar por perfil, não confiar na interface').toBe(403);
