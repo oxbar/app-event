@@ -22,6 +22,8 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
 
     Page<Ticket> findByEventOrganizationId(UUID organizationId, Pageable pageable);
 
+    Page<Ticket> findByEventIdAndEventOrganizationId(UUID eventId, UUID organizationId, Pageable pageable);
+
     Optional<Ticket> findByIdAndEventOrganizationId(UUID id, UUID organizationId);
 
     long countByEventOrganizationId(UUID organizationId);

@@ -39,9 +39,13 @@ test.describe('Portaria', () => {
     await expect(page.getByText(/já utilizado/i)).toBeVisible();
     await expect(page.getByText(/1\s*negadas/i)).toBeVisible();
 
+    // Valida o ingresso deste fluxo, não a quantidade global de usados.
+    // A listagem administrativa pode conter dados de execuções anteriores quando
+    // a base E2E é reaproveitada; isso não muda a invariante de idempotência.
     const tickets = await scenarioData.api.ticketsOfEvent(scenarioData.event.id);
-    const used = tickets.filter(ticket => ticket['status'] === 'USED');
-    expect(used).toHaveLength(1);
+    const matching = tickets.filter(ticket => ticket['publicCode'] === code);
+    expect(matching, `o ingresso ${code} deve aparecer uma única vez`).toHaveLength(1);
+    expect(matching[0]?.['status']).toBe('USED');
   });
 
   test('nega ingresso de outro evento', async ({page, scenarioData}) => {
@@ -73,7 +77,7 @@ test.describe('Portaria', () => {
     await organizer.goto('/tickets');
     const row = organizer.locator('article').filter({hasText: code}).first();
     await row.getByRole('button', {name: /bloquear/i}).click();
-    await expect(row.getByText(/bloqueado/i)).toBeVisible();
+    await expect(row.getByText('Bloqueado', {exact: true})).toBeVisible();
 
     await loginAs(page, scenario.doorStaff.email, scenario.doorStaff.password);
     await openDoor(page, scenarioData.event.name, point.name);
@@ -83,7 +87,7 @@ test.describe('Portaria', () => {
     await organizer.reload();
     const refreshedRow = organizer.locator('article').filter({hasText: code}).first();
     await refreshedRow.getByRole('button', {name: /desbloquear/i}).click();
-    await expect(refreshedRow.getByText(/válido/i)).toBeVisible();
+    await expect(refreshedRow.getByText('Válido', {exact: true})).toBeVisible();
 
     await validate(page, code);
     await expect(page.getByText('ENTRADA LIBERADA')).toBeVisible();

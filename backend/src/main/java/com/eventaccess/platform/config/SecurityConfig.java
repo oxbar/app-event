@@ -78,6 +78,13 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html")
                         .permitAll()
+                        // Faça a autorização das áreas sensíveis ainda na cadeia HTTP.
+                        // Assim, uma negação nunca chega ao controller como erro 500 e o
+                        // AccessDeniedHandler acima produz o contrato JSON 403 esperado.
+                        .requestMatchers("/api/payments/**", "/api/refunds/**")
+                        .hasAnyRole("SUPER_ADMIN", "ORGANIZER_ADMIN", "FINANCE")
+                        .requestMatchers("/api/audit/**")
+                        .hasAnyRole("SUPER_ADMIN", "ORGANIZER_ADMIN")
                         .anyRequest().authenticated())
                 .addFilterBefore(jwt, UsernamePasswordAuthenticationFilter.class)
                 .build();

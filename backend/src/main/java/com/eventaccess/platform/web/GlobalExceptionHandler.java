@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.http.*;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import java.time.OffsetDateTime;
@@ -25,6 +26,17 @@ public class GlobalExceptionHandler {
     ResponseEntity<ApiError> validation(MethodArgumentNotValidException ex) {
         var fields=ex.getBindingResult().getFieldErrors().stream().map(e->new FieldErrorDto(e.getField(), Optional.ofNullable(e.getDefaultMessage()).orElse("Valor inválido."))).toList();
         return ResponseEntity.badRequest().body(new ApiError(OffsetDateTime.now(),400,"VALIDATION_ERROR","Existem dados inválidos.",fields,MDC.get("traceId")));
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    ResponseEntity<ApiError> accessDenied(AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ApiError(
+                OffsetDateTime.now(),
+                HttpStatus.FORBIDDEN.value(),
+                "ACCESS_DENIED",
+                "Você não possui permissão para esta ação.",
+                List.of(),
+                MDC.get("traceId")));
     }
 
     @ExceptionHandler(Exception.class)

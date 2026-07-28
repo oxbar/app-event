@@ -44,8 +44,9 @@ public class AdminResourceController {
     @GetMapping("/tickets")
     Page<AdminQueryService.TicketAdminView> tickets(
             @AuthenticationPrincipal AppPrincipal principal,
+            @RequestParam(required = false) UUID eventId,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return service.tickets(principal, pageable);
+        return service.tickets(principal, eventId, pageable);
     }
 
     @PostMapping("/tickets/{id}/block")

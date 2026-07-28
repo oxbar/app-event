@@ -12,7 +12,8 @@
     "e2e:ui": "playwright test --ui",
     "e2e:report": "playwright show-report",
     "e2e:install": "playwright install --with-deps chromium",
-    "lint:e2e": "tsc -p tsconfig.e2e.json --noEmit"
+    "lint:e2e": "tsc -p tsconfig.e2e.json --noEmit",
+    "e2e:full": "playwright test --workers=1"
   },
   "dependencies": {
     "@angular/animations": "^20.3.0",

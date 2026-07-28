@@ -20,7 +20,9 @@ test.describe('Perfis e permissões', () => {
   for (const route of RESTRICTED) {
     test(`operador de portaria não acessa ${route}`, async ({page}) => {
       await page.goto(route);
-      await expect(page.getByText(/acesso negado|sem permissão|forbidden/i).first()).toBeVisible();
+      await expect(page).toHaveURL(/\/forbidden(?:[?#]|$)/);
+      await expect(page.getByRole('heading', {name: '403'})).toBeVisible();
+      await expect(page.getByText(/não possui permissão/i)).toBeVisible();
     });
   }
 

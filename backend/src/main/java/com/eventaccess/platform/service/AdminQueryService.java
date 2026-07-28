@@ -59,8 +59,11 @@ public class AdminQueryService {
     }
 
     @Transactional(readOnly = true)
-    public Page<TicketAdminView> tickets(AppPrincipal principal, Pageable pageable) {
-        return tickets.findByEventOrganizationId(principal.organizationId(), pageable).map(TicketAdminView::from);
+    public Page<TicketAdminView> tickets(AppPrincipal principal, UUID eventId, Pageable pageable) {
+        Page<Ticket> page = eventId == null
+                ? tickets.findByEventOrganizationId(principal.organizationId(), pageable)
+                : tickets.findByEventIdAndEventOrganizationId(eventId, principal.organizationId(), pageable);
+        return page.map(TicketAdminView::from);
     }
 
     @Transactional
