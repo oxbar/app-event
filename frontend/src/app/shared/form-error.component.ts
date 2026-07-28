@@ -28,6 +28,7 @@ export class FormErrorComponent {
     if (errors['phone']) return 'Informe um telefone brasileiro com DDD.';
     if (errors['cpf']) return 'Informe um CPF válido.';
     if (errors['strongPassword']) return 'Use maiúscula, minúscula, número e caractere especial.';
+    if (errors['passwordMismatch']) return 'As senhas não coincidem.';
     return `${this.label} está inválido.`;
   }
 }

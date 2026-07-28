@@ -1,12 +1,18 @@
 package com.eventaccess.platform.web;
 
+import com.eventaccess.platform.mail.MailService;
 import com.eventaccess.platform.payment.PaymentProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 /**
  * Diagnóstico mínimo da stack usada pela suíte Playwright.
@@ -22,11 +28,13 @@ import org.springframework.web.bind.annotation.RestController;
 @PreAuthorize("hasAnyRole('SUPER_ADMIN','ORGANIZER_ADMIN')")
 public class E2eSupportController {
     private final PaymentProvider paymentProvider;
+    private final MailService mail;
     private final String environment;
 
-    public E2eSupportController(PaymentProvider paymentProvider,
+    public E2eSupportController(PaymentProvider paymentProvider, MailService mail,
                                 @Value("${app.environment}") String environment) {
         this.paymentProvider = paymentProvider;
+        this.mail = mail;
         this.environment = environment;
     }
 
@@ -34,6 +42,22 @@ public class E2eSupportController {
     Status status() {
         String provider = paymentProvider.name();
         return new Status(environment, provider, "FAKE".equalsIgnoreCase(provider));
+    }
+
+    /**
+     * Caixa de saída em memória. A suíte usa isto para provar que o e-mail de
+     * recuperação foi realmente produzido, em vez de confiar no token que o
+     * ambiente de desenvolvimento devolve por conveniência.
+     */
+    @GetMapping("/mail")
+    List<MailService.SentMail> mailbox(@RequestParam(required = false) String recipient) {
+        return recipient == null || recipient.isBlank() ? mail.outbox() : mail.outboxFor(recipient);
+    }
+
+    @DeleteMapping("/mail")
+    @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
+    void clearMailbox() {
+        mail.clearOutbox();
     }
 
     public record Status(String environment, String paymentProvider, boolean ready) {}

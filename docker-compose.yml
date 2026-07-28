@@ -17,11 +17,22 @@ services:
     restart: unless-stopped
     networks: [event-access]
 
+  # Coletor SMTP local: nada sai para a internet e a caixa de entrada fica
+  # visível em http://localhost:8025. Em produção, aponte MAIL_HOST/MAIL_PORT
+  # para o provedor real e mantenha MAIL_ENABLED=true.
   mailpit:
-    image: axllent/mailpit:v1.30
+    image: axllent/mailpit:latest
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
     ports:
       - "1025:1025"
       - "8025:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
     networks: [event-access]
 
@@ -52,8 +63,11 @@ services:
       MAIL_USERNAME: ${MAIL_USERNAME:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-false}
-      MAIL_STARTTLS: ${MAIL_STARTTLS:-false}
-      MAIL_FROM: ${MAIL_FROM:-no-reply@eventaccess.local}
+      MAIL_SMTP_STARTTLS: ${MAIL_SMTP_STARTTLS:-false}
+      MAIL_FROM: ${MAIL_FROM:-nao-responda@eventaccess.local}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Event Access}
+      PASSWORD_RESET_TTL_MINUTES: ${PASSWORD_RESET_TTL_MINUTES:-30}
+      REPORTS_TIMEZONE: ${REPORTS_TIMEZONE:-America/Sao_Paulo}
     ports:
       - "8080:8080"
     depends_on:

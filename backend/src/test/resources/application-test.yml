@@ -14,3 +14,15 @@ app:
     secret: test-qr-secret-test-qr-secret-test-qr-secret
   cors:
     allowed-origins: http://localhost:4200
+  mail:
+    # Nos testes nada sai da JVM: o MailService registra na caixa de saída
+    # em memória, que é exatamente o que as asserções inspecionam.
+    enabled: false
+    from: nao-responda@eventaccess.test
+    from-name: Event Access (teste)
+  password-reset:
+    token-ttl-minutes: 30
+    max-requests-per-window: 3
+    window-minutes: 15
+  reports:
+    timezone: America/Sao_Paulo

@@ -239,4 +239,52 @@ export interface StaffAssignment {
   status: string;
 }
 
-export interface ForgotPasswordResult {message: string; developmentToken?: string}
+export interface ForgotPasswordResult {
+  message: string;
+  developmentToken?: string;
+  /** Validade do link, em minutos, para a interface informar o prazo. */
+  expiresInMinutes?: number;
+  /** Indica se a mensagem chegou ao servidor de e-mail. */
+  emailSent?: boolean;
+}
+
+export interface ReportTicketTypeLine {
+  ticketTypeId: string;
+  name: string;
+  category: string;
+  wristband?: string;
+  price: number;
+  serviceFee: number;
+  totalQuantity: number;
+  soldQuantity: number;
+  reservedQuantity: number;
+  availableQuantity: number;
+  issuedTickets: number;
+  usedTickets: number;
+  revenue: number;
+}
+
+export interface ReportSummary {
+  eventId: string;
+  eventName: string;
+  eventSlug: string;
+  eventStatus: string;
+  venueName?: string;
+  startsAt?: string;
+  endsAt?: string;
+  totalOrders: number;
+  paidOrders: number;
+  grossAmount: number;
+  serviceFees: number;
+  discounts: number;
+  totalAmount: number;
+  issuedTickets: number;
+  usedTickets: number;
+  blockedTickets: number;
+  totalCheckins: number;
+  approvedCheckins: number;
+  deniedCheckins: number;
+  attendanceRate: number;
+  ticketTypes: ReportTicketTypeLine[];
+  generatedAt: string;
+}

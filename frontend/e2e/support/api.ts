@@ -62,6 +62,16 @@ export interface AccessPointView {
   status: string;
 }
 
+export interface SentMailView {
+  to: string;
+  recipientName?: string;
+  subject: string;
+  html: string;
+  text: string;
+  delivered: boolean;
+  processedAt: string;
+}
+
 export interface StaffView {
   id: string;
   userId: string;
@@ -266,6 +276,36 @@ export class AdminApi {
     await assertOk(response, 'consultar auditoria');
     const body = await response.json();
     return (body.content ?? []).map((entry: {action: string}) => entry.action);
+  }
+
+  /**
+   * Caixa de saída de e-mails do backend (apenas em desenvolvimento).
+   *
+   * Ler a mensagem de verdade é o que prova o fluxo de recuperação de senha:
+   * confiar no token devolvido pela API testaria só a conveniência do ambiente,
+   * não a notificação que o usuário recebe.
+   */
+  async mailbox(recipient?: string): Promise<SentMailView[]> {
+    const query = recipient ? `?recipient=${encodeURIComponent(recipient)}` : '';
+    const response = await this.context.get(`/api/dev/e2e/mail${query}`, {headers: this.headers});
+    await assertOk(response, 'consultar a caixa de saída de e-mails');
+    return response.json();
+  }
+
+  /** Espera a chegada da mensagem: o envio acontece dentro da transação, mas a leitura é remota. */
+  async waitForMail(recipient: string, timeoutMs = 15_000): Promise<SentMailView> {
+    const deadline = Date.now() + timeoutMs;
+    let seen = 0;
+    while (Date.now() < deadline) {
+      const messages = await this.mailbox(recipient);
+      seen = messages.length;
+      if (messages.length) return messages[0];
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    throw new Error(
+      `Nenhum e-mail chegou para ${recipient} em ${timeoutMs}ms (mensagens vistas: ${seen}). `
+      + 'Confirme que o backend está em APP_ENVIRONMENT=development.',
+    );
   }
 
   async dispose(): Promise<void> {

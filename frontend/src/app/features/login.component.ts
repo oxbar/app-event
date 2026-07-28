@@ -4,12 +4,24 @@ import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 import {TuiButton, TuiCheckbox, TuiIcon, TuiInput, TuiLoader} from '@taiga-ui/core';
 import {AuthService} from '../core/auth.service';
 import {FormErrorComponent} from '../shared/form-error.component';
+import {ThemeToggleComponent} from '../shared/theme-toggle.component';
 
 @Component({
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, TuiButton, TuiIcon, TuiLoader, TuiInput, TuiCheckbox, FormErrorComponent],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    TuiButton,
+    TuiIcon,
+    TuiLoader,
+    TuiInput,
+    TuiCheckbox,
+    FormErrorComponent,
+    ThemeToggleComponent,
+  ],
   template: `
     <main class="auth-page">
+      <app-theme-toggle class="auth-page__theme" [showLabel]="false" appearance="flat" />
       <section class="auth-card">
         <div class="brand-mark">EA</div>
         <h1>Event Access</h1>
@@ -18,7 +30,7 @@ import {FormErrorComponent} from '../shared/form-error.component';
           <div class="error-panel" role="status">Sua sessão expirou. Entre novamente para continuar.</div>
         }
         @if (passwordReset()) {
-          <div class="success-panel" role="status">Senha redefinida com sucesso. Entre com a nova senha.</div>
+          <div class="success-panel" role="status">Senha alterada com sucesso. Entre com a nova senha.</div>
         }
         <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
           <div class="form-field">
@@ -66,7 +78,8 @@ export class LoginComponent {
   readonly showPassword = signal(false);
   private readonly route = inject(ActivatedRoute);
   readonly sessionExpired = signal(this.route.snapshot.queryParamMap.get('sessionExpired') === 'true');
-  readonly passwordReset = signal(this.route.snapshot.queryParamMap.get('passwordReset') === 'success');
+  /** Confirmação vinda da tela de nova senha, para fechar o ciclo do fluxo. */
+  readonly passwordReset = signal(this.route.snapshot.queryParamMap.get('passwordReset') === 'true');
   readonly form = this.fb.nonNullable.group({
     email: ['organizer@eventaccess.local', [Validators.required, Validators.email, Validators.maxLength(150)]],
     password: ['Organizer@123', [Validators.required, Validators.minLength(8)]],

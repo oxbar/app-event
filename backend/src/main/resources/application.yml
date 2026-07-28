@@ -27,11 +27,14 @@ spring:
     username: ${MAIL_USERNAME:}
     password: ${MAIL_PASSWORD:}
     properties:
-      mail.smtp.auth: ${MAIL_SMTP_AUTH:false}
-      mail.smtp.starttls.enable: ${MAIL_STARTTLS:false}
-      mail.smtp.connectiontimeout: 5000
-      mail.smtp.timeout: 5000
-      mail.smtp.writetimeout: 5000
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:false}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS:false}
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
 server:
   port: 8080
   forward-headers-strategy: framework
@@ -55,9 +58,6 @@ app:
   qr:
     secret: ${QR_SECRET:change-this-qr-secret-change-this-qr-secret-change-this}
   payment-provider: ${PAYMENT_PROVIDER:FAKE}
-  mail:
-    enabled: ${MAIL_ENABLED:false}
-    from: ${MAIL_FROM:no-reply@eventaccess.local}
   asaas:
     base-url: ${ASAAS_BASE_URL:https://api-sandbox.asaas.com/v3}
     api-key: ${ASAAS_API_KEY:}
@@ -65,6 +65,20 @@ app:
     user-agent: ${ASAAS_USER_AGENT:event-access-platform/1.0}
     sandbox: ${ASAAS_SANDBOX:true}
   data-encryption-secret: ${DATA_ENCRYPTION_SECRET:change-this-data-encryption-secret-change-this}
+  mail:
+    # Em desenvolvimento a stack sobe com o Mailpit (docker compose) e a entrega
+    # fica ligada. Sem servidor SMTP, o MailService apenas registra a mensagem.
+    enabled: ${MAIL_ENABLED:true}
+    from: ${MAIL_FROM:nao-responda@eventaccess.local}
+    from-name: ${MAIL_FROM_NAME:Event Access}
+    reply-to: ${MAIL_REPLY_TO:}
+    subject-prefix: ${MAIL_SUBJECT_PREFIX:}
+  password-reset:
+    token-ttl-minutes: ${PASSWORD_RESET_TTL_MINUTES:30}
+    max-requests-per-window: ${PASSWORD_RESET_MAX_REQUESTS:3}
+    window-minutes: ${PASSWORD_RESET_WINDOW_MINUTES:15}
+  reports:
+    timezone: ${REPORTS_TIMEZONE:America/Sao_Paulo}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
   rate-limit:

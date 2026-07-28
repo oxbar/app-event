@@ -1,5 +1,7 @@
 package com.eventaccess.platform.web;
 
+import com.eventaccess.platform.report.ReportService;
+import com.eventaccess.platform.report.ReportSummary;
 import com.eventaccess.platform.security.AppPrincipal;
 import com.eventaccess.platform.service.AdminQueryService;
 import jakarta.validation.Valid;
@@ -15,10 +17,14 @@ import java.util.*;
 @RestController
 @RequestMapping("/api")
 public class AdminResourceController {
-    private final AdminQueryService service;
+    private static final String XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
-    public AdminResourceController(AdminQueryService service) {
+    private final AdminQueryService service;
+    private final ReportService reports;
+
+    public AdminResourceController(AdminQueryService service, ReportService reports) {
         this.service = service;
+        this.reports = reports;
     }
 
     @GetMapping("/orders")
@@ -96,44 +102,51 @@ public class AdminResourceController {
         return service.audit(principal, pageable);
     }
 
-    @GetMapping("/events/{eventId}/reports/sales")
-    ResponseEntity<?> sales(@AuthenticationPrincipal AppPrincipal principal, @PathVariable UUID eventId,
-                            @RequestParam(defaultValue = "csv") String format) {
-        if ("xlsx".equalsIgnoreCase(format)) {
-            return xlsx("vendas.xlsx", service.salesXlsx(principal, eventId));
-        }
-        return csv("vendas.csv", service.salesCsv(principal, eventId));
+    @GetMapping(value = "/events/{eventId}/reports/sales", produces = "text/csv")
+    ResponseEntity<String> sales(@AuthenticationPrincipal AppPrincipal principal, @PathVariable UUID eventId) {
+        return csv("sales.csv", service.salesCsv(principal, eventId));
     }
 
-    @GetMapping("/events/{eventId}/reports/checkins")
-    ResponseEntity<?> checkins(@AuthenticationPrincipal AppPrincipal principal, @PathVariable UUID eventId,
-                               @RequestParam(defaultValue = "csv") String format) {
-        if ("xlsx".equalsIgnoreCase(format)) {
-            return xlsx("entradas.xlsx", service.checkinsXlsx(principal, eventId));
-        }
-        return csv("entradas.csv", service.checkinsCsv(principal, eventId));
+    @GetMapping(value = "/events/{eventId}/reports/checkins", produces = "text/csv")
+    ResponseEntity<String> checkins(@AuthenticationPrincipal AppPrincipal principal, @PathVariable UUID eventId) {
+        return csv("checkins.csv", service.checkinsCsv(principal, eventId));
+    }
+
+    /** Números consolidados usados pelos cartões da tela de relatórios. */
+    @GetMapping("/events/{eventId}/reports/summary")
+    ReportSummary reportSummary(@AuthenticationPrincipal AppPrincipal principal, @PathVariable UUID eventId) {
+        return reports.summary(principal, eventId);
+    }
+
+    @GetMapping(value = "/events/{eventId}/reports/sales.xlsx", produces = XLSX)
+    ResponseEntity<byte[]> salesWorkbook(@AuthenticationPrincipal AppPrincipal principal, @PathVariable UUID eventId) {
+        return xlsx(reports.fileName("vendas", principal, eventId), reports.salesWorkbook(principal, eventId));
+    }
+
+    @GetMapping(value = "/events/{eventId}/reports/checkins.xlsx", produces = XLSX)
+    ResponseEntity<byte[]> checkinsWorkbook(@AuthenticationPrincipal AppPrincipal principal,
+                                            @PathVariable UUID eventId) {
+        return xlsx(reports.fileName("entradas", principal, eventId), reports.checkinsWorkbook(principal, eventId));
+    }
+
+    /** Pasta de trabalho completa: resumo, vendas, ingressos e entradas. */
+    @GetMapping(value = "/events/{eventId}/reports/workbook.xlsx", produces = XLSX)
+    ResponseEntity<byte[]> fullWorkbook(@AuthenticationPrincipal AppPrincipal principal, @PathVariable UUID eventId) {
+        return xlsx(reports.fileName("relatorio", principal, eventId), reports.fullWorkbook(principal, eventId));
     }
 
     private ResponseEntity<String> csv(String name, String body) {
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition(name))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + name + "\"")
                 .contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
                 .body(body);
     }
 
     private ResponseEntity<byte[]> xlsx(String name, byte[] body) {
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition(name))
-                .contentType(MediaType.parseMediaType(
-                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                .contentLength(body.length)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + name + "\"")
+                .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(body.length))
+                .contentType(MediaType.parseMediaType(XLSX))
                 .body(body);
-    }
-
-    private String contentDisposition(String name) {
-        return ContentDisposition.attachment()
-                .filename(name, java.nio.charset.StandardCharsets.UTF_8)
-                .build()
-                .toString();
     }
 }

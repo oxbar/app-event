@@ -13,6 +13,7 @@ import {
   Page,
   Payment,
   PublicEvent,
+  ReportSummary,
   StaffAssignment,
   Ticket,
   TicketType,
@@ -147,11 +148,23 @@ export class AdminApi {
     return this.http.post<AdminRow>(`/api/payments/${paymentId}/refund`, {amount, reason});
   }
 
-  downloadReport(eventId: string, type: 'sales' | 'checkins', format: 'csv' | 'xlsx' = 'csv') {
-    return this.http.get(`/api/events/${eventId}/reports/${type}`, {
-      params: {format},
+  downloadReport(eventId: string, type: 'sales' | 'checkins') {
+    return this.http.get(`/api/events/${eventId}/reports/${type}`, {responseType: 'blob'});
+  }
+
+  /**
+   * Planilha XLSX. `workbook` traz resumo, vendas, ingressos e entradas em abas
+   * separadas; os demais valores exportam um assunto por arquivo.
+   */
+  downloadWorkbook(eventId: string, type: 'sales' | 'checkins' | 'workbook') {
+    return this.http.get(`/api/events/${eventId}/reports/${type}.xlsx`, {
       responseType: 'blob',
+      observe: 'response',
     });
+  }
+
+  reportSummary(eventId: string) {
+    return this.http.get<ReportSummary>(`/api/events/${eventId}/reports/summary`);
   }
 }
 

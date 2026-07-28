@@ -46,6 +46,32 @@ No Windows PowerShell:
 - Backend: http://localhost:8080
 - Swagger: http://localhost:8080/swagger-ui/index.html
 - Health: http://localhost:8080/actuator/health
+- Caixa de e-mails (Mailpit, desenvolvimento): http://localhost:8025
+
+## Recuperação de senha
+
+`/forgot-password` gera um link de uso único, válido por 30 minutos, enviado por
+e-mail. Em desenvolvimento a stack sobe com o Mailpit e a mensagem aparece em
+http://localhost:8025 — nada sai para a internet. Em produção, aponte
+`MAIL_HOST`/`MAIL_PORT` para o provedor real e mantenha `MAIL_ENABLED=true`.
+A resposta da API é sempre a mesma, exista ou não a conta.
+
+## Relatórios
+
+Cada evento exporta em dois formatos:
+
+- **CSV** (`/reports/sales`, `/reports/checkins`) — dados brutos para importar
+  em outra ferramenta.
+- **XLSX** (`/reports/workbook.xlsx`, `/reports/sales.xlsx`,
+  `/reports/checkins.xlsx`) — planilha formatada com abas de resumo, vendas,
+  ingressos e entradas, cabeçalho congelado, filtros, valores em moeda e datas
+  no fuso da organização.
+
+## Tema claro e escuro
+
+O tema é aplicado no elemento `<html>` (atributo `tuiTheme`) e aceita três
+estados: claro, escuro e "seguir o sistema". A escolha fica em `localStorage` e
+o controle está disponível também nas telas de login e recuperação de senha.
 
 ## Credenciais de desenvolvimento
 
@@ -152,12 +178,3 @@ A versão v6.3 fecha o fluxo operacional do ingresso e da portaria:
 - auditoria do check-in manual pelo endpoint `/checkins/manual`.
 
 Consulte `CHANGELOG-v6.3.md` e `docs/v6.3-checkin-ticket-legal.md`.
-
-## Recursos operacionais recentes
-
-- tema claro/escuro persistente e integrado ao Taiga UI;
-- recuperação de senha com token de uso único e envio SMTP;
-- Mailpit local em `http://localhost:8025`;
-- relatórios de vendas e entradas em CSV e Excel (`.xlsx`).
-
-Detalhes de configuração: [`docs/theme-password-reports-v7.md`](docs/theme-password-reports-v7.md).

@@ -1,2 +1,3 @@
-Event Access Platform v6.3.2
-Backend Docker packaging hotfix: deterministic app.jar copy after Maven package.
+Event Access Platform v7.0.0
+Tema claro/escuro corrigido na raiz do documento, recuperação de senha com
+notificação por e-mail (SMTP + Mailpit) e relatórios exportáveis em XLSX.

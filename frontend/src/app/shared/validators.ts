@@ -47,3 +47,51 @@ export const strongPasswordValidator: ValidatorFn = (control: AbstractControl): 
     && /[^A-Za-z0-9]/.test(value);
   return valid ? null : {strongPassword: true};
 };
+
+/**
+ * Confirmação de senha.
+ *
+ * O erro é publicado no controle de confirmação — e não só no grupo — porque é
+ * ali que a mensagem precisa aparecer para quem está digitando.
+ */
+export function passwordsMatchValidator(passwordField: string, confirmationField: string): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const password = control.get(passwordField);
+    const confirmation = control.get(confirmationField);
+    if (!password || !confirmation || !confirmation.value) return null;
+
+    const mismatch = password.value !== confirmation.value;
+    const errors = {...(confirmation.errors ?? {})};
+    if (mismatch) {
+      confirmation.setErrors({...errors, passwordMismatch: true});
+    } else if (errors['passwordMismatch']) {
+      delete errors['passwordMismatch'];
+      confirmation.setErrors(Object.keys(errors).length ? errors : null);
+    }
+    return mismatch ? {passwordMismatch: true} : null;
+  };
+}
+
+export interface PasswordStrength {
+  /** 0 (vazia) a 4 (forte). */
+  readonly level: number;
+  readonly label: string;
+  readonly rules: ReadonlyArray<{readonly id: string; readonly text: string; readonly met: boolean}>;
+}
+
+/**
+ * Força da senha em quatro critérios objetivos. É orientação, não bloqueio: o
+ * que impede o envio continua sendo a validação do formulário.
+ */
+export function passwordStrength(value: string): PasswordStrength {
+  const password = String(value ?? '');
+  const rules = [
+    {id: 'length', text: 'Pelo menos 8 caracteres', met: password.length >= 8},
+    {id: 'case', text: 'Maiúscula e minúscula', met: /[a-z]/.test(password) && /[A-Z]/.test(password)},
+    {id: 'digit', text: 'Pelo menos um número', met: /\d/.test(password)},
+    {id: 'symbol', text: 'Pelo menos um símbolo', met: /[^A-Za-z0-9]/.test(password)},
+  ];
+  const level = password ? rules.filter(rule => rule.met).length : 0;
+  const labels = ['Vazia', 'Fraca', 'Razoável', 'Boa', 'Forte'];
+  return {level, label: labels[level] ?? 'Vazia', rules};
+}

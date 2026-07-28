@@ -8,10 +8,21 @@ import {apiErrorMessage} from '../core/api-error';
 import {AuthService} from '../core/auth.service';
 import {ThemeService} from '../core/theme.service';
 import {SelectFieldComponent, SelectOption} from '../shared/select-field.component';
+import {ThemeToggleComponent} from '../shared/theme-toggle.component';
 
 @Component({
   standalone: true,
-  imports: [ReactiveFormsModule, RouterOutlet, RouterLink, RouterLinkActive, TuiButton, TuiIcon, TuiInput, SelectFieldComponent],
+  imports: [
+    ReactiveFormsModule,
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    TuiButton,
+    TuiIcon,
+    TuiInput,
+    SelectFieldComponent,
+    ThemeToggleComponent,
+  ],
   template: `
     <a class="skip-link" href="#main-content">Ir para o conteúdo principal</a>
     <div class="shell" [class.sidebar-collapsed]="sidebarCollapsed()">
@@ -93,23 +104,14 @@ import {SelectFieldComponent, SelectOption} from '../shared/select-field.compone
           @if (error()) {<small class="header-error" role="alert">{{error()}}</small>}
 
           <div class="header-spacer"></div>
-          <div class="user-summary">
-            <strong>{{auth.user()?.name}}</strong>
-            <small>{{auth.user()?.email}}</small>
+          <div class="user-chip">
+            <span class="user-chip__avatar" aria-hidden="true">{{initials()}}</span>
+            <div class="user-summary">
+              <strong>{{auth.user()?.name}}</strong>
+              <small>{{auth.user()?.email}}</small>
+            </div>
           </div>
-          <button
-            class="theme-toggle"
-            tuiButton
-            appearance="secondary"
-            type="button"
-            [iconStart]="theme.dark() ? '@tui.sun' : '@tui.moon'"
-            [attr.aria-pressed]="theme.dark()"
-            [attr.aria-label]="theme.dark() ? 'Tema claro' : 'Tema escuro'"
-            [attr.title]="theme.dark() ? 'Ativar tema claro' : 'Ativar tema escuro'"
-            (click)="theme.toggle()"
-          >
-            <span>{{theme.dark() ? 'Tema claro' : 'Tema escuro'}}</span>
-          </button>
+          <app-theme-toggle />
           <button tuiButton appearance="flat" type="button" iconStart="@tui.log-out" (click)="auth.logout()">
             Sair
           </button>
@@ -134,6 +136,15 @@ export class ShellComponent {
   readonly organizationOptions = computed<readonly SelectOption[]>(() =>
     this.auth.organizationOptions().map(organization => ({value: organization.id, label: organization.name})),
   );
+  /** Iniciais do usuário para o avatar do cabeçalho. */
+  readonly initials = computed(() => {
+    const name = this.auth.user()?.name?.trim() ?? '';
+    if (!name) return '?';
+    const parts = name.split(/\s+/).filter(Boolean);
+    const first = parts[0]?.charAt(0) ?? '';
+    const last = parts.length > 1 ? parts[parts.length - 1].charAt(0) : '';
+    return (first + last).toLocaleUpperCase('pt-BR');
+  });
   readonly organizationControl = new FormControl(
     this.auth.user()?.organizationId ?? '',
     {nonNullable: true},
