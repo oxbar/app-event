@@ -15,16 +15,14 @@ test.describe('Checkout público e pagamento Pix', () => {
     await page.locator('#accepted-terms').check();
     await page.locator('#accepted-privacy').check();
 
-    // R$ 50,00 do ingresso + R$ 5,00 de taxa.
-    await expect(page.getByText(new RegExp(`${TOTAL_COMMON},00`))).toBeVisible();
+    // Escopo no resumo evita colisão com o preço unitário do card do ingresso.
+    await expect(page.locator('.purchase-summary__total strong')).toContainText(`${TOTAL_COMMON},00`);
 
     await page.getByRole('button', {name: /pix|finalizar|continuar/i}).first().click();
     await page.waitForURL(/\/payment\//, {timeout: 20_000});
 
-    // O Pix copia e cola precisa existir antes de qualquer outra afirmação:
-    // sem ele o comprador não tem como pagar.
     await expect(page.locator('#pix-code')).toBeVisible();
-    const pixCode = await page.locator('#pix-code').innerText();
+    const pixCode = await page.locator('#pix-code').inputValue();
     expect(pixCode.trim().length).toBeGreaterThan(30);
   });
 
@@ -33,11 +31,15 @@ test.describe('Checkout público e pagamento Pix', () => {
 
     await page.locator('#checkout-name').fill(scenario.buyer.name);
     await page.locator('#checkout-email').fill(scenario.buyer.email);
+    await page.locator('#checkout-phone').fill(scenario.buyer.phone);
     await page.locator('#accepted-terms').check();
     await page.locator('#accepted-privacy').check();
-    await page.getByRole('button', {name: /pix|finalizar|continuar/i}).first().click();
 
-    // Continua na página do evento: o formulário barrou o envio.
+    const submit = page.getByRole('button', {name: /pix|finalizar|continuar/i}).first();
+    await expect(submit, 'sem CPF o checkout deve permanecer inválido').toBeDisabled();
+
+    await page.locator('#checkout-document').fill(scenario.buyer.document);
+    await expect(submit, 'com os demais dados válidos, informar o CPF libera o envio').toBeEnabled();
     await expect(page).toHaveURL(new RegExp(`/e/${scenarioData.event.slug}`));
   });
 
@@ -51,13 +53,12 @@ test.describe('Checkout público e pagamento Pix', () => {
 
   test('webhook duplicado não emite ingresso extra', async ({page, scenarioData}) => {
     const order = await buyCommonTicket(page, scenarioData);
-    const paymentId = order.payments?.[0]?.id;
+    const paymentId = order.payment?.id;
     expect(paymentId, 'pedido pago deveria ter pagamento associado').toBeTruthy();
 
     await scenarioData.api.duplicateApproval(paymentId!);
 
     const reloaded = await scenarioData.api.order(order.publicCode);
-    // Dois eventos de aprovação, um ingresso. É a invariante que protege o caixa.
     expect(reloaded.tickets?.length).toBe(1);
     expect(reloaded.status).toBe('PAID');
   });

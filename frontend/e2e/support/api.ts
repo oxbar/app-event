@@ -25,13 +25,50 @@ export interface TicketTypeView {
   availableQuantity?: number;
 }
 
-export interface OrderView {
+export interface PaymentView {
   id: string;
+  status: string;
+  provider?: string;
+}
+
+export interface TicketView {
+  publicCode: string;
+  status: string;
+  qrValue?: string;
+}
+
+/** Espelha CheckoutService.OrderView: pagamento é singular, não uma coleção. */
+export interface OrderView {
   publicCode: string;
   status: string;
   totalAmount: number;
-  tickets?: {publicCode: string; status: string; qrToken?: string}[];
-  payments?: {id: string; status: string}[];
+  tickets?: TicketView[];
+  payment?: PaymentView;
+}
+
+export interface MemberView {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+}
+
+export interface AccessPointView {
+  id: string;
+  name: string;
+  description?: string;
+  status: string;
+}
+
+export interface StaffView {
+  id: string;
+  userId: string;
+  accessPointId?: string;
+  accessPointName?: string;
+  role: string;
+  status: string;
 }
 
 /**
@@ -46,6 +83,7 @@ export class AdminApi {
   private constructor(
     private readonly context: APIRequestContext,
     private readonly token: string,
+    private organizationId?: string,
   ) {}
 
   static async login(email = ORGANIZER.email, password = ORGANIZER.password): Promise<AdminApi> {
@@ -55,8 +93,6 @@ export class AdminApi {
     if (!response.ok()) {
       const status = response.status();
       const body = await response.text();
-      // Um "falhou ao autenticar" sem status não diz nada a quem está depurando.
-      // O que resolve o problema é o código HTTP e a dica do que costuma causá-lo.
       throw new Error(
         [
           `Login recusado para ${email} em ${E2E_API_URL}/api/auth/login`,
@@ -71,7 +107,7 @@ export class AdminApi {
     if (!body.accessToken) {
       throw new Error(`Login respondeu 200 sem accessToken. Corpo: ${JSON.stringify(body)}`);
     }
-    return new AdminApi(context, body.accessToken);
+    return new AdminApi(context, body.accessToken, body.user?.organizationId);
   }
 
   private get headers(): Record<string, string> {
@@ -92,8 +128,6 @@ export class AdminApi {
         state: 'SC',
         country: 'BR',
         // Janela deliberada: começou há 30 minutos e termina em 4 horas.
-        // Evita as recusas EVENT_NOT_STARTED e EVENT_FINISHED, que são corretas
-        // mas atrapalhariam o caminho feliz.
         startsAt: new Date(now - 30 * 60_000).toISOString(),
         endsAt: new Date(now + 4 * 60 * 60_000).toISOString(),
         salesStartAt: new Date(now - 60 * 60_000).toISOString(),
@@ -102,7 +136,7 @@ export class AdminApi {
         requireDocument: true,
       },
     });
-    expect(response.ok(), await failureText(response, 'criar evento')).toBeTruthy();
+    await assertOk(response, 'criar evento');
     return response.json();
   }
 
@@ -117,36 +151,86 @@ export class AdminApi {
         ...type,
       },
     });
-    expect(response.ok(), await failureText(response, 'criar tipo de ingresso')).toBeTruthy();
+    await assertOk(response, 'criar tipo de ingresso');
     return response.json();
   }
 
   async publish(eventId: string): Promise<EventView> {
     const response = await this.context.post(`/api/events/${eventId}/publish`, {headers: this.headers});
-    expect(response.ok(), await failureText(response, 'publicar evento')).toBeTruthy();
+    await assertOk(response, 'publicar evento');
     return response.json();
   }
 
   async order(publicCode: string): Promise<OrderView> {
     const response = await this.context.get(`/api/public/orders/${publicCode}`);
-    expect(response.ok(), await failureText(response, `carregar pedido ${publicCode}`)).toBeTruthy();
+    await assertOk(response, `carregar pedido ${publicCode}`);
+    return response.json();
+  }
+
+  async ensureMember(member: {name: string; email: string; password: string}): Promise<MemberView> {
+    const organizationId = await this.requireOrganizationId();
+    const existing = await this.memberByEmail(organizationId, member.email);
+    if (existing) return existing;
+
+    const response = await this.context.post(`/api/organizations/${organizationId}/members`, {
+      headers: this.headers,
+      data: {
+        name: member.name,
+        email: member.email,
+        temporaryPassword: member.password,
+        role: 'DOOR_STAFF',
+      },
+    });
+
+    // Em retry ou execução concorrente outro teste pode ter criado entre GET e POST.
+    if (response.status() === 409) {
+      const created = await this.memberByEmail(organizationId, member.email);
+      if (created) return created;
+    }
+
+    await assertOk(response, `criar membro ${member.email}`);
+    return response.json();
+  }
+
+  async ensureAccessPoint(eventId: string, name: string): Promise<AccessPointView> {
+    const listed = await this.context.get(`/api/events/${eventId}/access-points`, {headers: this.headers});
+    await assertOk(listed, `listar portarias do evento ${eventId}`);
+    const points = (await listed.json()) as AccessPointView[];
+    const existing = points.find(point => point.name === name);
+    if (existing) return existing;
+
+    const response = await this.context.post(`/api/events/${eventId}/access-points`, {
+      headers: this.headers,
+      data: {name, description: 'Portaria preparada pela suíte end-to-end', status: 'ACTIVE'},
+    });
+    await assertOk(response, `criar portaria ${name}`);
+    return response.json();
+  }
+
+  async ensureDoorAssignment(eventId: string, userId: string, accessPointId: string): Promise<StaffView> {
+    const listed = await this.context.get(`/api/events/${eventId}/staff`, {headers: this.headers});
+    await assertOk(listed, `listar equipe do evento ${eventId}`);
+    const staff = (await listed.json()) as StaffView[];
+    const existing = staff.find(item => item.userId === userId && item.accessPointId === accessPointId);
+    if (existing) return existing;
+
+    const response = await this.context.post(`/api/events/${eventId}/staff`, {
+      headers: this.headers,
+      data: {userId, accessPointId, role: 'DOOR_STAFF'},
+    });
+    await assertOk(response, `vincular operador ${userId} à portaria ${accessPointId}`);
     return response.json();
   }
 
   /**
    * Aprova o Pix pelo endpoint de desenvolvimento.
-   *
-   * O roteiro manual usa o sandbox do Asaas. Numa suíte automatizada isso
-   * introduz rede externa, latência e um serviço de terceiro no caminho crítico —
-   * três motivos para o teste falhar sem que o produto tenha problema.
+   * O backend deve estar com PAYMENT_PROVIDER=FAKE.
    */
   async approvePayment(paymentId: string): Promise<void> {
     const response = await this.context.post(`/api/dev/payments/${paymentId}/approve`, {headers: this.headers});
     if (response.ok()) return;
 
     const body = await response.text();
-    // A trava está correta: cobrança Asaas real não pode ser marcada como paga
-    // por endpoint interno. Mas o erro cru não diz o que fazer, então dizemos aqui.
     if (body.includes('MANUAL_APPROVAL_NOT_ALLOWED')) {
       throw new Error(
         [
@@ -166,25 +250,47 @@ export class AdminApi {
 
   /** Reenvia o mesmo evento de aprovação, para provar que ingresso não duplica. */
   async duplicateApproval(paymentId: string): Promise<void> {
-    await this.context.post(`/api/dev/payments/${paymentId}/duplicate`, {headers: this.headers});
+    const response = await this.context.post(`/api/dev/payments/${paymentId}/duplicate`, {headers: this.headers});
+    await assertOk(response, `reenviar aprovação do pagamento ${paymentId}`);
   }
 
   async ticketsOfEvent(eventId: string): Promise<Record<string, unknown>[]> {
     const response = await this.context.get(`/api/tickets?eventId=${eventId}&size=100`, {headers: this.headers});
-    if (!response.ok()) return [];
+    await assertOk(response, `listar ingressos do evento ${eventId}`);
     const body = await response.json();
     return body.content ?? body;
   }
 
   async auditActions(): Promise<string[]> {
     const response = await this.context.get('/api/audit?size=100', {headers: this.headers});
-    if (!response.ok()) return [];
+    await assertOk(response, 'consultar auditoria');
     const body = await response.json();
     return (body.content ?? []).map((entry: {action: string}) => entry.action);
   }
 
   async dispose(): Promise<void> {
     await this.context.dispose();
+  }
+
+  private async memberByEmail(organizationId: string, email: string): Promise<MemberView | undefined> {
+    const response = await this.context.get(`/api/organizations/${organizationId}/members`, {headers: this.headers});
+    await assertOk(response, `listar membros da organização ${organizationId}`);
+    const members = (await response.json()) as MemberView[];
+    return members.find(member => member.email.toLowerCase() === email.toLowerCase());
+  }
+
+  private async requireOrganizationId(): Promise<string> {
+    if (this.organizationId) return this.organizationId;
+
+    const response = await this.context.get('/api/organizations?size=1', {headers: this.headers});
+    await assertOk(response, 'descobrir organização autenticada');
+    const body = await response.json();
+    const organizationId = body.content?.[0]?.id as string | undefined;
+    if (!organizationId) {
+      throw new Error(`Nenhuma organização disponível para o usuário autenticado. Corpo: ${JSON.stringify(body)}`);
+    }
+    this.organizationId = organizationId;
+    return organizationId;
   }
 }
 
@@ -211,8 +317,12 @@ function hintFor(status: number): string {
   }
 }
 
-async function failureText(response: {status(): number; text(): Promise<string>}, action: string): Promise<string> {
-  return `Falha ao ${action} — HTTP ${response.status()}: ${await response.text()}`;
+async function assertOk(
+  response: {ok(): boolean; status(): number; text(): Promise<string>},
+  action: string,
+): Promise<void> {
+  if (response.ok()) return;
+  throw new Error(`Falha ao ${action} — HTTP ${response.status()}: ${await response.text()}`);
 }
 
 function normalizeBaseUrl(value: string): string {

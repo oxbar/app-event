@@ -6,39 +6,47 @@ import {scenario} from './support/data';
 test.describe('Ingresso digital', () => {
   test('mostra QR Code, pulseira e código público', async ({page, scenarioData}) => {
     const order = await buyCommonTicket(page, scenarioData);
-    const token = order.tickets?.[0]?.qrToken;
-    test.skip(!token, 'API não devolveu o token do ingresso nesta versão.');
+    const ticketUrl = absoluteTicketUrl(order.tickets?.[0]?.qrValue, page.url());
 
-    await page.goto(`/t/${token}`);
+    await page.goto(ticketUrl);
 
     await expect(page.getByRole('img', {name: /qr code/i})).toBeVisible();
     await expect(page.getByText(/TKT-/).first()).toBeVisible();
-    // A pulseira é a ação que a portaria executa depois de liberar a entrada.
     await expect(page.getByText(scenario.ticketTypes.common.wristbandLabel).first()).toBeVisible();
     await expect(page.getByText(/válido/i).first()).toBeVisible();
   });
 
   test('continua acessível sem sessão, pelo token opaco', async ({page, scenarioData, browser}) => {
     const order = await buyCommonTicket(page, scenarioData);
-    const token = order.tickets?.[0]?.qrToken;
-    test.skip(!token, 'API não devolveu o token do ingresso nesta versão.');
+    const ticketUrl = absoluteTicketUrl(order.tickets?.[0]?.qrValue, page.url());
 
     const anonymous = await browser.newContext();
-    const anonymousPage = await anonymous.newPage();
-    await anonymousPage.goto(`${page.url().split('/t/')[0].replace(/\/payment\/.*/, '')}/t/${token}`);
-
-    await expect(anonymousPage.getByText(/TKT-/).first()).toBeVisible();
-    await anonymous.close();
+    try {
+      const anonymousPage = await anonymous.newPage();
+      await anonymousPage.goto(ticketUrl);
+      await expect(anonymousPage.getByText(/TKT-/).first()).toBeVisible();
+    } finally {
+      await anonymous.close();
+    }
   });
 
   test('copiar o código dá retorno visual', async ({page, context, scenarioData}) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     const order = await buyCommonTicket(page, scenarioData);
-    const token = order.tickets?.[0]?.qrToken;
-    test.skip(!token, 'API não devolveu o token do ingresso nesta versão.');
+    const ticketUrl = absoluteTicketUrl(order.tickets?.[0]?.qrValue, page.url());
 
-    await page.goto(`/t/${token}`);
+    await page.goto(ticketUrl);
     await page.getByRole('button', {name: /copiar código/i}).click();
     await expect(page.getByRole('button', {name: /código copiado/i})).toBeVisible();
   });
 });
+
+function absoluteTicketUrl(value: string | undefined, base: string): string {
+  expect(value, 'pedido pago deveria devolver qrValue do ingresso').toBeTruthy();
+  const normalized = value!.trim();
+  if (/^https?:\/\//i.test(normalized) || normalized.startsWith('/')) {
+    return new URL(normalized, base).toString();
+  }
+  if (normalized.includes('/t/')) return new URL(normalized, base).toString();
+  return new URL(`/t/${encodeURIComponent(normalized)}`, base).toString();
+}

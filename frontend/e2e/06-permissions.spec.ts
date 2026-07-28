@@ -1,17 +1,19 @@
-import {E2E_API_URL} from './support/api';
+import {AdminApi, E2E_API_URL} from './support/api';
 import {scenario} from './support/data';
 import {expect, loginAs, test} from './support/fixtures';
 
-/**
- * Roteiro passo 18.
- *
- * Menu escondendo botão não é controle de acesso. Por isso este arquivo checa
- * as duas camadas: o que a interface bloqueia e o que a API recusa.
- */
+/** Menu escondido não é autorização; a suíte verifica interface e backend. */
 const RESTRICTED = ['/payments', '/refunds', '/audit', '/operations'];
 
 test.describe('Perfis e permissões', () => {
   test.beforeEach(async ({page}) => {
+    // Cada teste pode rodar isoladamente ou após reinício do worker.
+    const api = await AdminApi.login();
+    try {
+      await api.ensureMember(scenario.doorStaff);
+    } finally {
+      await api.dispose();
+    }
     await loginAs(page, scenario.doorStaff.email, scenario.doorStaff.password);
   });
 
@@ -30,7 +32,6 @@ test.describe('Perfis e permissões', () => {
   });
 
   test('a API recusa mesmo sem passar pela interface', async ({page, request}) => {
-    // A sessão é guardada como um único JSON sob 'event-access-session'.
     const token = await page.evaluate(() => {
       const raw = localStorage.getItem('event-access-session') ?? sessionStorage.getItem('event-access-session');
       if (!raw) return null;
@@ -40,7 +41,7 @@ test.describe('Perfis e permissões', () => {
         return null;
       }
     });
-    test.skip(!token, 'Token não exposto no storage sob esta configuração.');
+    expect(token, 'o login deve persistir o accessToken para a chamada direta').toBeTruthy();
 
     const response = await request.get(`${E2E_API_URL}/api/payments`, {
       headers: {Authorization: `Bearer ${token}`},

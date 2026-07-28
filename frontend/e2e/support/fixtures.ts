@@ -10,27 +10,45 @@ export interface Scenario {
 }
 
 /**
- * Cenário montado uma vez por arquivo de teste: evento publicado com dois lotes.
- * Cada arquivo recebe o seu, então uma falha em 05 não contamina 07.
+ * Cada teste recebe evento e lotes próprios. O identificador usa o testId do
+ * Playwright, evitando colisão entre títulos que começam igual e entre projetos.
  */
 export const test = base.extend<{organizer: Page; scenarioData: Scenario}>({
   scenarioData: async ({}, use, testInfo) => {
     const api = await AdminApi.login();
-    const suffix = testInfo.title.slice(0, 6).replace(/\W/g, '') || 'x';
-    const slug = `${scenario.eventSlug}-${suffix}-${testInfo.workerIndex}`.toLowerCase();
+    try {
+      const readable = slugPart(testInfo.title).slice(0, 24) || 'teste';
+      const identity = testInfo.testId.replace(/\W/g, '').slice(-10) || `${testInfo.workerIndex}`;
+      const project = slugPart(testInfo.project.name).slice(0, 16) || 'projeto';
+      const suffix = `${readable}-${project}-${identity}`;
+      const slug = `${scenario.eventSlug}-${suffix}`.toLowerCase();
 
-    const event = await api.createEvent(`${scenario.eventName} ${suffix}`, slug, scenario.venue);
-    const common = await api.createTicketType(event.id, scenario.ticketTypes.common);
-    const premium = await api.createTicketType(event.id, scenario.ticketTypes.premium);
-    await api.publish(event.id);
+      const event = await api.createEvent(`${scenario.eventName} ${readable} ${identity.slice(-6)}`, slug, scenario.venue);
+      const common = await api.createTicketType(event.id, scenario.ticketTypes.common);
+      const premium = await api.createTicketType(event.id, scenario.ticketTypes.premium);
+      await api.publish(event.id);
 
-    await use({api, event, common, premium});
-    await api.dispose();
+      await use({api, event, common, premium});
+    } finally {
+      await api.dispose();
+    }
   },
 
-  organizer: async ({page}, use) => {
-    await loginAs(page, ORGANIZER.email, ORGANIZER.password);
-    await use(page);
+  // Contexto isolado: login do operador na página principal não pode substituir
+  // a sessão do organizador usada simultaneamente em testes administrativos.
+  organizer: async ({browser, baseURL}, use) => {
+    const context = await browser.newContext({
+      baseURL: baseURL ?? process.env['E2E_BASE_URL'] ?? 'http://localhost:4200',
+      locale: 'pt-BR',
+      timezoneId: 'America/Sao_Paulo',
+    });
+    const organizer = await context.newPage();
+    try {
+      await loginAs(organizer, ORGANIZER.email, ORGANIZER.password);
+      await use(organizer);
+    } finally {
+      await context.close();
+    }
   },
 });
 
@@ -44,10 +62,8 @@ export async function loginAs(page: Page, email: string, password: string): Prom
   await page.getByRole('button', {name: /^entrar$/i}).click();
 
   try {
-    await page.waitForURL(/\/(dashboard|events)/, {timeout: 20_000});
+    await page.waitForURL(/\/(dashboard|events|door)/, {timeout: 20_000});
   } catch (error) {
-    // Um timeout de navegação não diz se a culpa foi credencial, backend ou seletor.
-    // A própria tela costuma ter a resposta, então lemos o painel de erro antes de falhar.
     const panel = page.locator('.error-panel');
     const shown = (await panel.count()) > 0 ? (await panel.first().innerText()).trim() : '';
     throw new Error(
@@ -56,10 +72,20 @@ export async function loginAs(page: Page, email: string, password: string): Prom
         shown ? `A tela exibiu: "${shown}"` : 'A tela não exibiu nenhum erro — pode ser o backend fora do ar.',
         `URL no momento da falha: ${page.url()}`,
         '',
-        'Se a mensagem for de credencial, confirme a senha real e use:',
-        '  E2E_ORGANIZER_EMAIL=... E2E_ORGANIZER_PASSWORD=... npm run e2e',
+        email === ORGANIZER.email
+          ? 'Para trocar as credenciais do organizador use E2E_ORGANIZER_EMAIL e E2E_ORGANIZER_PASSWORD.'
+          : 'Confirme se o usuário de teste foi criado e está ativo antes do login.',
       ].join('\n'),
       {cause: error},
     );
   }
+}
+
+function slugPart(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 }
