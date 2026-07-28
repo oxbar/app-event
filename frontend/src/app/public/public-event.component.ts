@@ -1,8 +1,8 @@
 import {CurrencyPipe, DatePipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
-import {ActivatedRoute, Router} from '@angular/router';
-import {TuiButton, TuiCheckbox, TuiInput, TuiLoader} from '@taiga-ui/core';
+import {ActivatedRoute, Router, RouterLink} from '@angular/router';
+import {TuiButton, TuiInput, TuiLoader} from '@taiga-ui/core';
 import {apiErrorMessage} from '../core/api-error';
 import {CheckoutApi, EventApi} from '../core/api.services';
 import {PublicEvent, TicketType} from '../core/models';
@@ -17,9 +17,9 @@ import {brazilianPhoneValidator, cpfValidator} from '../shared/validators';
     DatePipe,
     ReactiveFormsModule,
     TuiButton,
-    TuiCheckbox,
     TuiLoader,
     TuiInput,
+    RouterLink,
     FormErrorComponent,
     InputMaskDirective,
   ],
@@ -158,10 +158,25 @@ import {brazilianPhoneValidator, cpfValidator} from '../shared/validators';
                 <app-form-error [control]="form.controls.quantity" label="Quantidade" />
               </div>
 
-              <label class="terms-check">
-                <input tuiCheckbox type="checkbox" formControlName="accepted" />
-                <span>Li e aceito os termos de uso e a política de privacidade.</span>
-              </label>
+              <div class="legal-consents">
+                <div class="legal-consent">
+                  <input id="accepted-terms" class="legal-consent__checkbox" type="checkbox" formControlName="acceptedTerms" />
+                  <div class="legal-consent__text">
+                    <label for="accepted-terms">Li e aceito os</label>
+                    <a routerLink="/termos-de-uso" target="_blank" rel="noopener noreferrer">Termos de Uso</a>.
+                  </div>
+                </div>
+                <app-form-error [control]="form.controls.acceptedTerms" label="Aceite dos Termos de Uso" />
+
+                <div class="legal-consent">
+                  <input id="accepted-privacy" class="legal-consent__checkbox" type="checkbox" formControlName="acceptedPrivacy" />
+                  <div class="legal-consent__text">
+                    <label for="accepted-privacy">Li e estou ciente da</label>
+                    <a routerLink="/politica-de-privacidade" target="_blank" rel="noopener noreferrer">Política de Privacidade</a>.
+                  </div>
+                </div>
+                <app-form-error [control]="form.controls.acceptedPrivacy" label="Ciência da Política de Privacidade" />
+              </div>
 
               @if (error()) {
                 <div class="error-panel" role="alert">{{error()}}</div>
@@ -201,7 +216,8 @@ export class PublicEventComponent {
     phone: ['', [Validators.required, brazilianPhoneValidator]],
     documentNumber: [''],
     quantity: [1, [Validators.required, Validators.min(1)]],
-    accepted: [false, Validators.requiredTrue],
+    acceptedTerms: [false, Validators.requiredTrue],
+    acceptedPrivacy: [false, Validators.requiredTrue],
   });
 
   constructor() {
@@ -265,8 +281,8 @@ export class PublicEventComponent {
         documentNumber: event.event.requireDocument ? value.documentNumber : undefined,
       },
       items: [{ticketTypeId: ticketType.id, quantity: value.quantity}],
-      acceptedTerms: value.accepted,
-      acceptedPrivacy: value.accepted,
+      acceptedTerms: value.acceptedTerms,
+      acceptedPrivacy: value.acceptedPrivacy,
     }).subscribe({
       next: order => this.checkout.pix(order.publicCode).subscribe({
         next: () => void this.router.navigate(['/payment', order.publicCode]),

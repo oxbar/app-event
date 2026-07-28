@@ -570,3 +570,150 @@ app-select-field {
   .payment-header small { max-width: 48%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .payment-success-card { margin-top: 2rem; padding: 1.5rem; }
 }
+
+/* v6.3 — consentimento legal, ingresso para download e portaria */
+.legal-consents {
+  display: grid;
+  gap: .65rem;
+  padding: .95rem;
+  border: 1px solid #e4e2f1;
+  border-radius: 1rem;
+  background: #faf9ff;
+}
+
+.legal-consent {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: start;
+  gap: .7rem;
+}
+
+.legal-consent__checkbox {
+  appearance: none;
+  inline-size: 22px !important;
+  block-size: 22px;
+  min-inline-size: 22px;
+  margin: .05rem 0 0;
+  display: grid;
+  place-items: center;
+  border: 2px solid #77738a;
+  border-radius: 6px;
+  background: #fff !important;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+}
+
+.legal-consent__checkbox::before {
+  content: '';
+  inline-size: 10px;
+  block-size: 6px;
+  border-left: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: rotate(-45deg) scale(0);
+  transform-origin: center;
+  transition: transform .12s ease;
+}
+
+.legal-consent__checkbox:checked {
+  border-color: #6248df;
+  background: #6248df !important;
+  box-shadow: 0 0 0 3px rgba(98, 72, 223, .13);
+}
+
+.legal-consent__checkbox:checked::before { transform: rotate(-45deg) scale(1); }
+.legal-consent__checkbox:focus-visible { outline: 3px solid rgba(98, 72, 223, .22); outline-offset: 2px; }
+.legal-consent label { color: #4f5466; font-size: .84rem; font-weight: 600; line-height: 1.5; cursor: pointer; }
+.legal-consent a { color: #5038cb; font-weight: 800; text-decoration: underline; text-underline-offset: 2px; }
+.legal-consents .field-error { margin-left: 2rem; }
+
+.legal-page {
+  min-height: 100dvh;
+  padding-bottom: 4rem;
+  color: #111827;
+  background: linear-gradient(180deg, #f5f4ff 0%, #f8f9fc 100%);
+}
+
+.legal-header {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .8rem max(1rem, calc((100% - 900px) / 2));
+  border-bottom: 1px solid #e2e4ed;
+  background: rgba(255,255,255,.94);
+}
+
+.legal-document {
+  width: min(900px, calc(100% - 2rem));
+  margin: 2rem auto 0;
+  padding: clamp(1.35rem, 4vw, 3rem);
+  border: 1px solid #e1e3eb;
+  border-radius: 1.5rem;
+  background: #fff;
+  box-shadow: 0 22px 65px rgba(31, 24, 71, .08);
+}
+
+.legal-document h1 { margin: .35rem 0 .2rem; font-size: clamp(2.1rem, 5vw, 3.3rem); letter-spacing: -.04em; }
+.legal-document h2 { margin: 2rem 0 .55rem; font-size: 1.18rem; }
+.legal-document p { margin: 0; color: #4b5563; line-height: 1.75; }
+.legal-updated { color: #7b8090 !important; }
+.legal-notice { margin-top: 2.25rem; padding: 1rem; border: 1px solid #ddd7ff; border-radius: 1rem; background: #f6f3ff; color: #44368c; line-height: 1.55; }
+
+.ticket-page {
+  min-height: 100dvh;
+  padding: 2rem 1rem;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 0%, #25194f 0%, #09090b 48%);
+}
+
+.digital-ticket {
+  width: min(470px, 100%);
+  padding: 1.6rem;
+  gap: 1.15rem;
+  border: 1px solid rgba(255,255,255,.2);
+  box-shadow: 0 30px 100px rgba(0,0,0,.42);
+}
+
+.digital-ticket header > div { display: grid; justify-items: start; gap: .15rem; }
+.digital-ticket header small { color: #6b7280; }
+.digital-ticket__event { display: grid; gap: .45rem; }
+.digital-ticket__event > small { color: #6248df; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+.digital-ticket__event h1 { margin: 0; font-size: 2rem; }
+.digital-ticket__event p { margin: 0; font-size: 1.05rem; }
+.digital-ticket__meta { display: grid; gap: .2rem; color: #6b7280; font-size: .86rem; }
+.digital-ticket__qr { width: min(330px, 100%); margin: 0 auto; padding: .7rem; border: 1px solid #e5e7eb; border-radius: 1rem; background: #fff; }
+.digital-ticket__qr img { display: block; width: 100%; }
+.digital-ticket code { overflow-wrap: anywhere; }
+.ticket-actions { display: grid; gap: .65rem; }
+
+.success-ticket-item {
+  padding: 1rem;
+  display: grid;
+  gap: .75rem;
+  border: 1px solid #e3e4ed;
+  border-radius: 1rem;
+  background: #fafafe;
+  text-align: left;
+}
+.success-ticket-item > div:first-child { display: grid; gap: .2rem; }
+.success-ticket-item small { color: #6e7185; overflow-wrap: anywhere; }
+.success-ticket-actions { display: flex; flex-wrap: wrap; gap: .55rem; }
+
+@media (max-width: 560px) {
+  .legal-consents { padding: .8rem; }
+  .legal-consents .field-error { margin-left: 0; }
+  .success-ticket-actions { display: grid; }
+  .ticket-page { padding: 1rem .6rem; }
+  .digital-ticket { border-radius: 1.2rem; padding: 1.15rem; }
+}
+.legal-consent__text { color: #4f5466; font-size: .84rem; font-weight: 600; line-height: 1.5; }
+.legal-consent__text label { display: inline; cursor: pointer; }
+.legal-consent__text a { color: #5038cb; font-weight: 800; text-decoration: underline; text-underline-offset: 2px; }
+.checkout-form-card input.legal-consent__checkbox {
+  width: 22px !important;
+  height: 22px !important;
+  min-width: 22px !important;
+  min-height: 22px !important;
+  padding: 0 !important;
+}

@@ -86,6 +86,9 @@ export interface Ticket {
   status: string;
   attendeeName: string;
   ticketType: string;
+  eventName: string;
+  eventStartsAt: string;
+  venueName?: string;
   wristbandLabel?: string;
   wristbandColorName?: string;
   wristbandColorHex?: string;

@@ -127,6 +127,7 @@ public class InvitationService {
                 order.getServiceFee(), order.getTotalAmount(), order.getCurrency(), order.getExpiresAt(),
                 order.getPaidAt(), null, List.of(new CheckoutService.TicketView(ticket.getPublicCode(),
                 ticket.getStatus(), ticket.getAttendee().getName(), ticket.getTicketType().getName(),
+                ticket.getEvent().getName(), ticket.getEvent().getStartsAt(), ticket.getEvent().getVenueName(),
                 ticket.getTicketType().getWristbandLabel(), ticket.getTicketType().getWristbandColorName(),
                 ticket.getTicketType().getWristbandColorHex(), qrCodes.ticketUrl(token),
                 qrCodes.dataUrl(qrCodes.ticketUrl(token), 320), ticket.getCheckedInAt())));

@@ -195,7 +195,8 @@ public class CheckoutService {
         }
         String value = qr.ticketUrl(token);
         return new TicketView(ticket.getPublicCode(), ticket.getStatus(), ticket.getAttendee().getName(),
-                ticket.getTicketType().getName(), ticket.getTicketType().getWristbandLabel(),
+                ticket.getTicketType().getName(), ticket.getEvent().getName(), ticket.getEvent().getStartsAt(),
+                ticket.getEvent().getVenueName(), ticket.getTicketType().getWristbandLabel(),
                 ticket.getTicketType().getWristbandColorName(), ticket.getTicketType().getWristbandColorHex(),
                 value, qr.dataUrl(value, 360), ticket.getCheckedInAt());
     }
@@ -269,14 +270,16 @@ public class CheckoutService {
                 orderTickets.stream().map(ticket -> {
                     if (ticket.getStatus() == TicketStatus.PENDING_PAYMENT) {
                         return new TicketView(ticket.getPublicCode(), ticket.getStatus(), ticket.getAttendee().getName(),
-                                ticket.getTicketType().getName(), ticket.getTicketType().getWristbandLabel(),
+                                ticket.getTicketType().getName(), ticket.getEvent().getName(), ticket.getEvent().getStartsAt(),
+                                ticket.getEvent().getVenueName(), ticket.getTicketType().getWristbandLabel(),
                                 ticket.getTicketType().getWristbandColorName(), ticket.getTicketType().getWristbandColorHex(),
                                 null, null, ticket.getCheckedInAt());
                     }
                     String token = crypto.ticketToken(ticket.getId(), ticket.getPublicCode());
                     String value = qr.ticketUrl(token);
                     return new TicketView(ticket.getPublicCode(), ticket.getStatus(), ticket.getAttendee().getName(),
-                            ticket.getTicketType().getName(), ticket.getTicketType().getWristbandLabel(),
+                            ticket.getTicketType().getName(), ticket.getEvent().getName(), ticket.getEvent().getStartsAt(),
+                            ticket.getEvent().getVenueName(), ticket.getTicketType().getWristbandLabel(),
                             ticket.getTicketType().getWristbandColorName(), ticket.getTicketType().getWristbandColorHex(),
                             value, qr.dataUrl(value, 360), ticket.getCheckedInAt());
                 }).toList());
@@ -328,6 +331,7 @@ public class CheckoutService {
         }
     }
     public record TicketView(String publicCode, TicketStatus status, String attendeeName, String ticketType,
+                             String eventName, OffsetDateTime eventStartsAt, String venueName,
                              String wristbandLabel, String wristbandColorName, String wristbandColorHex,
                              String qrValue, String qrCodeDataUrl, OffsetDateTime checkedInAt) {}
     public record OrderView(String publicCode, OrderStatus status, BigDecimal subtotal, BigDecimal serviceFee,

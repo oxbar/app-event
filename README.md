@@ -137,3 +137,18 @@ podman compose up --build -d
 ```
 
 A versão v6 também corrige o checkout público, o armazenamento do QR Code Base64 e a atualização automática do faturamento. Consulte `CHANGELOG-v6.md`.
+
+
+## Atualização v6.3
+
+A versão v6.3 fecha o fluxo operacional do ingresso e da portaria:
+
+- check-in manual por código público `TKT-...`;
+- leitura por token opaco ou URL completa `/t/{token}` e `/ticket/{token}`;
+- download do ingresso completo em PNG;
+- download separado do QR Code;
+- aceite visível e separado dos Termos de Uso e da Política de Privacidade;
+- páginas públicas `/termos-de-uso` e `/politica-de-privacidade`;
+- auditoria do check-in manual pelo endpoint `/checkins/manual`.
+
+Consulte `CHANGELOG-v6.3.md` e `docs/v6.3-checkin-ticket-legal.md`.

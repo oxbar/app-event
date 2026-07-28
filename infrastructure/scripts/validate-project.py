@@ -30,7 +30,7 @@ for token in ['TODO','UnsupportedOperationException','console.log(']: ok(f'sem {
 sql=(ROOT/'backend/src/main/resources/db/migration/V1__schema.sql').read_text()
 for table in ['organizations','users','organization_members','events','ticket_types','attendees','orders','order_items','payments','payment_webhooks','tickets','invitations','access_points','event_staff','checkins','refunds','audit_logs']:
     ok(f'tabela {table}',bool(re.search(rf'CREATE TABLE {table}\s*\(',sql,re.I)),'não criada')
-ok('check-in atômico',"WHERE id=:ticketId AND status='VALID'" in source,'update atômico ausente')
+ok('check-in atômico', bool(re.search(r"WHERE\s+id\s*=\s*:ticketId\s+AND\s+status\s*=\s*'VALID'", source, re.I)), 'update atômico ausente')
 ok('token de QR opaco','HmacSHA256' in source and 'qr_token_hash' in sql,'estratégia de token ausente')
 ok('isolamento por organização','organizationId' in source and 'findByIdAndOrganizationId' in source,'filtro de tenant ausente')
 print('VALIDAÇÃO ESTRUTURAL')

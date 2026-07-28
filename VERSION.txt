@@ -1,3 +1,2 @@
-Event Access Platform v6.2
-Base: v6.1 (Asaas Sandbox + hotfix backend)
-Atualização: checkout público redesenhado, máscaras, validações, autofill e responsividade.
+Event Access Platform v6.3.2
+Backend Docker packaging hotfix: deterministic app.jar copy after Maven package.

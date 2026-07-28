@@ -7,8 +7,9 @@ import {finalize, interval, startWith, switchMap, takeWhile} from 'rxjs';
 import {apiErrorMessage} from '../core/api-error';
 import {CheckoutApi} from '../core/api.services';
 import {AuthService} from '../core/auth.service';
-import {Order} from '../core/models';
+import {Order, Ticket} from '../core/models';
 import {DisplayLabelPipe} from '../shared/display-label.pipe';
+import {TicketDownloadService} from '../shared/ticket-download.service';
 
 @Component({
   standalone: true,
@@ -30,7 +31,21 @@ import {DisplayLabelPipe} from '../shared/display-label.pipe';
             <div class="success-tickets">
               @for (ticket of current.tickets; track ticket.publicCode) {
                 @if (ticket.qrValue) {
-                  <a tuiButton [href]="'/ticket/' + token(ticket.qrValue)">Abrir ingresso {{ticket.publicCode}}</a>
+                  <article class="success-ticket-item">
+                    <div>
+                      <b>{{ticket.ticketType}}</b>
+                      <small>{{ticket.publicCode}} · {{ticket.attendeeName}}</small>
+                    </div>
+                    <div class="success-ticket-actions">
+                      <a tuiButton [href]="'/ticket/' + token(ticket.qrValue)">Abrir ingresso</a>
+                      <button tuiButton appearance="secondary" type="button" (click)="downloadTicket(ticket)">
+                        Baixar PNG
+                      </button>
+                      <button tuiButton appearance="flat" type="button" (click)="downloadQr(ticket)">
+                        Baixar QR Code
+                      </button>
+                    </div>
+                  </article>
                 }
               }
             </div>
@@ -161,6 +176,7 @@ import {DisplayLabelPipe} from '../shared/display-label.pipe';
 })
 export class PaymentComponent {
   private readonly api = inject(CheckoutApi);
+  private readonly downloads = inject(TicketDownloadService);
   readonly auth = inject(AuthService);
   readonly code = inject(ActivatedRoute).snapshot.paramMap.get('code') ?? '';
   private readonly destroyRef = inject(DestroyRef);
@@ -197,6 +213,17 @@ export class PaymentComponent {
       this.copied.set(true);
       window.setTimeout(() => this.copied.set(false), 1800);
     });
+  }
+
+
+  downloadTicket(ticket: Ticket): void {
+    void this.downloads.downloadTicket(ticket).catch(() => {
+      this.error.set('Não foi possível gerar a imagem do ingresso.');
+    });
+  }
+
+  downloadQr(ticket: Ticket): void {
+    this.downloads.downloadQr(ticket);
   }
 
   approveFake(id: string): void {

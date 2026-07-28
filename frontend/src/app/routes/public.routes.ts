@@ -8,5 +8,7 @@ export const PUBLIC_ROUTES: Routes = [
   {path: 'payment/:code', loadComponent: () => import('../public/payment.component').then(m => m.PaymentComponent)},
   {path: 'ticket/:token', loadComponent: () => import('../public/ticket.component').then(m => m.TicketComponent)},
   {path: 't/:token', loadComponent: () => import('../public/ticket.component').then(m => m.TicketComponent)},
+  {path: 'termos-de-uso', data: {kind: 'terms'}, loadComponent: () => import('../public/legal-page.component').then(m => m.LegalPageComponent)},
+  {path: 'politica-de-privacidade', data: {kind: 'privacy'}, loadComponent: () => import('../public/legal-page.component').then(m => m.LegalPageComponent)},
   {path: 'forbidden', loadComponent: () => import('../features/forbidden.component').then(m => m.ForbiddenComponent)},
 ];

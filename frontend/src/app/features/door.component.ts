@@ -44,7 +44,8 @@ import {SelectFieldComponent, SelectOption} from '../shared/select-field.compone
 
           <div class="form-field">
             <label for="door-token">Código do ingresso</label>
-            <tui-textfield><input id="door-token" tuiInput autocomplete="off" placeholder="Cole ou digite o código" formControlName="token" /></tui-textfield>
+            <tui-textfield><input id="door-token" tuiInput autocomplete="off" placeholder="TKT-..., link do ingresso ou token do QR Code" formControlName="token" /></tui-textfield>
+            <small class="form-hint">Aceita o código TKT-, o link completo do ingresso ou o conteúdo do QR Code.</small>
             <app-form-error [control]="form.controls.token" label="Código do ingresso" />
           </div>
           <button tuiButton type="button" (click)="manual()" [disabled]="submitting()">
@@ -133,7 +134,7 @@ export class DoorComponent {
         result => {
           if (result) {
             this.form.controls.token.setValue(result.getText());
-            this.scan(result.getText());
+            this.scan(result.getText(), false);
             this.stop();
           }
         },
@@ -155,17 +156,17 @@ export class DoorComponent {
       this.form.markAllAsTouched();
       return;
     }
-    this.scan(this.form.controls.token.value.trim());
+    this.scan(this.form.controls.token.value.trim(), true);
   }
 
-  private scan(token: string): void {
+  private scan(token: string, manual: boolean): void {
     const eventId = this.form.controls.eventId.value;
     const pointId = this.form.controls.pointId.value;
     if (!eventId || !pointId || !token || this.submitting()) return;
     this.submitting.set(true);
     this.error.set('');
     this.result.set(null);
-    this.api.scan(eventId, token, pointId).subscribe({
+    (manual ? this.api.manual(eventId, token, pointId) : this.api.scan(eventId, token, pointId)).subscribe({
       next: result => {
         this.result.set(result);
         this.submitting.set(false);

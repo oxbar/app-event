@@ -185,6 +185,7 @@ public class PaymentService {
                     String value = token == null ? null : qr.ticketUrl(token);
                     return new CheckoutService.TicketView(ticket.getPublicCode(), ticket.getStatus(),
                             ticket.getAttendee().getName(), ticket.getTicketType().getName(),
+                            ticket.getEvent().getName(), ticket.getEvent().getStartsAt(), ticket.getEvent().getVenueName(),
                             ticket.getTicketType().getWristbandLabel(), ticket.getTicketType().getWristbandColorName(),
                             ticket.getTicketType().getWristbandColorHex(), value,
                             value == null ? null : qr.dataUrl(value, 360), ticket.getCheckedInAt());

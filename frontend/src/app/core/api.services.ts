@@ -105,7 +105,15 @@ export class CheckinApi {
   }
 
   scan(eventId: string, token: string, accessPointId: string) {
-    return this.http.post<CheckinResult>(`/api/events/${eventId}/checkins/scan`, {
+    return this.submit(eventId, 'scan', token, accessPointId);
+  }
+
+  manual(eventId: string, token: string, accessPointId: string) {
+    return this.submit(eventId, 'manual', token, accessPointId);
+  }
+
+  private submit(eventId: string, mode: 'scan' | 'manual', token: string, accessPointId: string) {
+    return this.http.post<CheckinResult>(`/api/events/${eventId}/checkins/${mode}`, {
       token,
       accessPointId,
       deviceIdentifier: navigator.userAgent,

@@ -45,7 +45,7 @@ class CriticalFlowIntegrationTest {
 
         String checkoutPayload = """
             {"buyer":{"name":"João da Silva","email":"joao@example.com","phone":"47999999999"},
-             "items":[{"ticketTypeId":"%s","quantity":1}],"acceptedTerms":true,"acceptedPrivacy":true}
+             "items":[{"ticketTypeId":"%s","quantity":2}],"acceptedTerms":true,"acceptedPrivacy":true}
             """.formatted(ticketTypeId);
         JsonNode order = body(post("/api/public/events/" + eventId + "/checkout").contentType(MediaType.APPLICATION_JSON).content(checkoutPayload), null);
         String orderCode = order.get("publicCode").asText();
@@ -55,16 +55,29 @@ class CriticalFlowIntegrationTest {
         body(post("/api/dev/payments/" + paymentId + "/approve").contentType(MediaType.APPLICATION_JSON).content("{}"), organizer);
         JsonNode paid = body(get("/api/public/orders/" + orderCode + "/payment-status"), null);
         assertThat(paid.get("status").asText()).isEqualTo("PAID");
-        String qrValue = paid.at("/tickets/0/qrValue").asText();
+        String publicCode = paid.at("/tickets/0/publicCode").asText();
+        String alternateTicketUrl = paid.at("/tickets/1/qrValue").asText().replace("/t/", "/ticket/");
 
         String door = login("door@eventaccess.local", "Door@123");
         JsonNode points = body(get("/api/events/" + eventId + "/access-points"), door);
         String pointId = points.get(0).get("id").asText();
-        String scan = "{\"token\":\"%s\",\"accessPointId\":\"%s\",\"deviceIdentifier\":\"test\"}".formatted(qrValue, pointId);
-        JsonNode first = body(post("/api/events/" + eventId + "/checkins/scan").contentType(MediaType.APPLICATION_JSON).content(scan), door);
-        JsonNode second = body(post("/api/events/" + eventId + "/checkins/scan").contentType(MediaType.APPLICATION_JSON).content(scan), door);
-        assertThat(first.get("approved").asBoolean()).isTrue();
-        assertThat(second.get("result").asText()).isEqualTo("ALREADY_USED");
+
+        String manualPayload = "{\"token\":\"%s\",\"accessPointId\":\"%s\",\"deviceIdentifier\":\"manual-test\"}"
+                .formatted(publicCode, pointId);
+        JsonNode manual = body(post("/api/events/" + eventId + "/checkins/manual")
+                .contentType(MediaType.APPLICATION_JSON).content(manualPayload), door);
+
+        String scanPayload = "{\"token\":\"%s\",\"accessPointId\":\"%s\",\"deviceIdentifier\":\"camera-test\"}"
+                .formatted(alternateTicketUrl, pointId);
+        JsonNode scan = body(post("/api/events/" + eventId + "/checkins/scan")
+                .contentType(MediaType.APPLICATION_JSON).content(scanPayload), door);
+
+        JsonNode duplicate = body(post("/api/events/" + eventId + "/checkins/manual")
+                .contentType(MediaType.APPLICATION_JSON).content(manualPayload), door);
+
+        assertThat(manual.get("approved").asBoolean()).isTrue();
+        assertThat(scan.get("approved").asBoolean()).isTrue();
+        assertThat(duplicate.get("result").asText()).isEqualTo("ALREADY_USED");
     }
 
     private String login(String email, String password) throws Exception {
