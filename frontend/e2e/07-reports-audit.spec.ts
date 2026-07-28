@@ -11,7 +11,7 @@ test.describe('Relatórios e auditoria', () => {
     await selectComboboxOption(organizer, '#report-event', scenarioData.event.name);
     const [download] = await Promise.all([
       organizer.waitForEvent('download'),
-      organizer.getByRole('button', {name: /exportar vendas/i}).click(),
+      organizer.getByRole('button', {name: 'Exportar vendas CSV', exact: true}).click(),
     ]);
 
     const content = await readDownload(download);
@@ -24,11 +24,29 @@ test.describe('Relatórios e auditoria', () => {
     await selectComboboxOption(organizer, '#report-event', scenarioData.event.name);
     const [download] = await Promise.all([
       organizer.waitForEvent('download'),
-      organizer.getByRole('button', {name: /exportar entradas/i}).click(),
+      organizer.getByRole('button', {name: 'Exportar entradas CSV', exact: true}).click(),
     ]);
 
     const content = await readDownload(download);
     expect(content.split('\n')[0].toLowerCase()).toMatch(/resultado|participante|portaria/);
+  });
+
+
+  test('exporta vendas e entradas em Excel', async ({organizer, page, scenarioData}) => {
+    await buyCommonTicket(page, scenarioData);
+    await organizer.goto('/reports');
+    await selectComboboxOption(organizer, '#report-event', scenarioData.event.name);
+
+    for (const buttonName of ['Exportar vendas Excel', 'Exportar entradas Excel']) {
+      const [download] = await Promise.all([
+        organizer.waitForEvent('download'),
+        organizer.getByRole('button', {name: buttonName, exact: true}).click(),
+      ]);
+      expect(download.suggestedFilename()).toMatch(/\.xlsx$/);
+      const bytes = await readDownloadBytes(download);
+      expect(bytes.length).toBeGreaterThan(1_000);
+      expect(bytes.subarray(0, 2).toString('ascii')).toBe('PK');
+    }
   });
 
   test('a auditoria registra as ações críticas do fluxo', async ({page, scenarioData}) => {
@@ -47,4 +65,12 @@ async function readDownload(download: import('@playwright/test').Download): Prom
   const chunks: Buffer[] = [];
   for await (const chunk of stream) chunks.push(Buffer.from(chunk));
   return Buffer.concat(chunks).toString('utf8');
+}
+
+async function readDownloadBytes(download: import('@playwright/test').Download): Promise<Buffer> {
+  const stream = await download.createReadStream();
+  if (!stream) throw new Error('O navegador não disponibilizou o conteúdo do download.');
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+  return Buffer.concat(chunks);
 }

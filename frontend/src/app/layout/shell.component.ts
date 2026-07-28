@@ -98,13 +98,17 @@ import {SelectFieldComponent, SelectOption} from '../shared/select-field.compone
             <small>{{auth.user()?.email}}</small>
           </div>
           <button
+            class="theme-toggle"
             tuiButton
             appearance="secondary"
             type="button"
             [iconStart]="theme.dark() ? '@tui.sun' : '@tui.moon'"
+            [attr.aria-pressed]="theme.dark()"
+            [attr.aria-label]="theme.dark() ? 'Tema claro' : 'Tema escuro'"
+            [attr.title]="theme.dark() ? 'Ativar tema claro' : 'Ativar tema escuro'"
             (click)="theme.toggle()"
           >
-            {{theme.dark() ? 'Tema claro' : 'Tema escuro'}}
+            <span>{{theme.dark() ? 'Tema claro' : 'Tema escuro'}}</span>
           </button>
           <button tuiButton appearance="flat" type="button" iconStart="@tui.log-out" (click)="auth.logout()">
             Sair

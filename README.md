@@ -152,3 +152,12 @@ A versão v6.3 fecha o fluxo operacional do ingresso e da portaria:
 - auditoria do check-in manual pelo endpoint `/checkins/manual`.
 
 Consulte `CHANGELOG-v6.3.md` e `docs/v6.3-checkin-ticket-legal.md`.
+
+## Recursos operacionais recentes
+
+- tema claro/escuro persistente e integrado ao Taiga UI;
+- recuperação de senha com token de uso único e envio SMTP;
+- Mailpit local em `http://localhost:8025`;
+- relatórios de vendas e entradas em CSV e Excel (`.xlsx`).
+
+Detalhes de configuração: [`docs/theme-password-reports-v7.md`](docs/theme-password-reports-v7.md).

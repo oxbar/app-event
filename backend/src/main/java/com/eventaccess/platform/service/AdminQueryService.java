@@ -24,10 +24,12 @@ public class AdminQueryService {
     private final CheckinRepository checkins;
     private final AuditLogRepository auditLogs;
     private final AuditService audit;
+    private final ReportWorkbookService workbooks;
 
     public AdminQueryService(OrderRepository orders, PaymentRepository payments, TicketRepository tickets,
                              AttendeeRepository attendees, EventRepository events, CheckinRepository checkins,
-                             AuditLogRepository auditLogs, AuditService audit) {
+                             AuditLogRepository auditLogs, AuditService audit,
+                             ReportWorkbookService workbooks) {
         this.orders = orders;
         this.payments = payments;
         this.tickets = tickets;
@@ -36,6 +38,7 @@ public class AdminQueryService {
         this.checkins = checkins;
         this.auditLogs = auditLogs;
         this.audit = audit;
+        this.workbooks = workbooks;
     }
 
     @Transactional(readOnly = true)
@@ -176,8 +179,26 @@ public class AdminQueryService {
         return csv.toString();
     }
 
+    @Transactional(readOnly = true)
+    public byte[] salesXlsx(AppPrincipal principal, UUID eventId) {
+        Event event = events.findByIdAndOrganizationId(eventId, principal.organizationId())
+                .orElseThrow(() -> ApiException.notFound("Evento não encontrado."));
+        return workbooks.sales(event.getName(), orders.findByEventId(eventId));
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] checkinsXlsx(AppPrincipal principal, UUID eventId) {
+        Event event = events.findByIdAndOrganizationId(eventId, principal.organizationId())
+                .orElseThrow(() -> ApiException.notFound("Evento não encontrado."));
+        return workbooks.checkins(event.getName(), checkins.findByEventIdOrderByScannedAtDesc(eventId));
+    }
+
     private String csv(String value) {
-        return '"' + (value == null ? "" : value.replace("\"", "\"\"")) + '"';
+        String safe = value == null ? "" : value;
+        if (!safe.isEmpty() && "=+-@\t\r".indexOf(safe.charAt(0)) >= 0) {
+            safe = "'" + safe;
+        }
+        return '"' + safe.replace("\"", "\"\"") + '"';
     }
 
     private String maskPhone(String value) {

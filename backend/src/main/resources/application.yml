@@ -21,6 +21,17 @@ spring:
   mvc:
     problemdetails:
       enabled: false
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${MAIL_SMTP_AUTH:false}
+      mail.smtp.starttls.enable: ${MAIL_STARTTLS:false}
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 5000
+      mail.smtp.writetimeout: 5000
 server:
   port: 8080
   forward-headers-strategy: framework
@@ -44,6 +55,9 @@ app:
   qr:
     secret: ${QR_SECRET:change-this-qr-secret-change-this-qr-secret-change-this}
   payment-provider: ${PAYMENT_PROVIDER:FAKE}
+  mail:
+    enabled: ${MAIL_ENABLED:false}
+    from: ${MAIL_FROM:no-reply@eventaccess.local}
   asaas:
     base-url: ${ASAAS_BASE_URL:https://api-sandbox.asaas.com/v3}
     api-key: ${ASAAS_API_KEY:}

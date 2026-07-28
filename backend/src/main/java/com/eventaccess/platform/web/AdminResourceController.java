@@ -96,20 +96,44 @@ public class AdminResourceController {
         return service.audit(principal, pageable);
     }
 
-    @GetMapping(value = "/events/{eventId}/reports/sales", produces = "text/csv")
-    ResponseEntity<String> sales(@AuthenticationPrincipal AppPrincipal principal, @PathVariable UUID eventId) {
-        return csv("sales.csv", service.salesCsv(principal, eventId));
+    @GetMapping("/events/{eventId}/reports/sales")
+    ResponseEntity<?> sales(@AuthenticationPrincipal AppPrincipal principal, @PathVariable UUID eventId,
+                            @RequestParam(defaultValue = "csv") String format) {
+        if ("xlsx".equalsIgnoreCase(format)) {
+            return xlsx("vendas.xlsx", service.salesXlsx(principal, eventId));
+        }
+        return csv("vendas.csv", service.salesCsv(principal, eventId));
     }
 
-    @GetMapping(value = "/events/{eventId}/reports/checkins", produces = "text/csv")
-    ResponseEntity<String> checkins(@AuthenticationPrincipal AppPrincipal principal, @PathVariable UUID eventId) {
-        return csv("checkins.csv", service.checkinsCsv(principal, eventId));
+    @GetMapping("/events/{eventId}/reports/checkins")
+    ResponseEntity<?> checkins(@AuthenticationPrincipal AppPrincipal principal, @PathVariable UUID eventId,
+                               @RequestParam(defaultValue = "csv") String format) {
+        if ("xlsx".equalsIgnoreCase(format)) {
+            return xlsx("entradas.xlsx", service.checkinsXlsx(principal, eventId));
+        }
+        return csv("entradas.csv", service.checkinsCsv(principal, eventId));
     }
 
     private ResponseEntity<String> csv(String name, String body) {
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + name + "\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition(name))
                 .contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
                 .body(body);
+    }
+
+    private ResponseEntity<byte[]> xlsx(String name, byte[] body) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition(name))
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .contentLength(body.length)
+                .body(body);
+    }
+
+    private String contentDisposition(String name) {
+        return ContentDisposition.attachment()
+                .filename(name, java.nio.charset.StandardCharsets.UTF_8)
+                .build()
+                .toString();
     }
 }

@@ -147,8 +147,11 @@ export class AdminApi {
     return this.http.post<AdminRow>(`/api/payments/${paymentId}/refund`, {amount, reason});
   }
 
-  downloadReport(eventId: string, type: 'sales' | 'checkins') {
-    return this.http.get(`/api/events/${eventId}/reports/${type}`, {responseType: 'blob'});
+  downloadReport(eventId: string, type: 'sales' | 'checkins', format: 'csv' | 'xlsx' = 'csv') {
+    return this.http.get(`/api/events/${eventId}/reports/${type}`, {
+      params: {format},
+      responseType: 'blob',
+    });
   }
 }
 

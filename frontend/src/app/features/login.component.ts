@@ -17,6 +17,9 @@ import {FormErrorComponent} from '../shared/form-error.component';
         @if (sessionExpired()) {
           <div class="error-panel" role="status">Sua sessão expirou. Entre novamente para continuar.</div>
         }
+        @if (passwordReset()) {
+          <div class="success-panel" role="status">Senha redefinida com sucesso. Entre com a nova senha.</div>
+        }
         <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
           <div class="form-field">
             <label for="login-email">E-mail</label>
@@ -61,7 +64,9 @@ export class LoginComponent {
   readonly loading = signal(false);
   readonly error = signal('');
   readonly showPassword = signal(false);
-  readonly sessionExpired = signal(inject(ActivatedRoute).snapshot.queryParamMap.get('sessionExpired') === 'true');
+  private readonly route = inject(ActivatedRoute);
+  readonly sessionExpired = signal(this.route.snapshot.queryParamMap.get('sessionExpired') === 'true');
+  readonly passwordReset = signal(this.route.snapshot.queryParamMap.get('passwordReset') === 'success');
   readonly form = this.fb.nonNullable.group({
     email: ['organizer@eventaccess.local', [Validators.required, Validators.email, Validators.maxLength(150)]],
     password: ['Organizer@123', [Validators.required, Validators.minLength(8)]],
