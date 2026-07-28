@@ -12,7 +12,10 @@ test.describe('Ingresso digital', () => {
 
     await expect(page.getByRole('img', {name: /qr code/i})).toBeVisible();
     await expect(page.getByText(/TKT-/).first()).toBeVisible();
-    await expect(page.getByText(scenario.ticketTypes.common.wristbandLabel).first()).toBeVisible();
+    const wristband = page.locator('.wristband');
+    await expect(wristband).toBeVisible();
+    await expect(wristband).toContainText(/pulseira/i);
+    await expect(wristband).toContainText(new RegExp(scenario.ticketTypes.common.wristbandColorName, 'i'));
     await expect(page.getByText(/válido/i).first()).toBeVisible();
   });
 

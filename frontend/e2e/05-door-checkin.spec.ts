@@ -82,7 +82,9 @@ test.describe('Portaria', () => {
     await loginAs(page, scenario.doorStaff.email, scenario.doorStaff.password);
     await openDoor(page, scenarioData.event.name, point.name);
     await validate(page, code);
-    await expect(page.getByText(/bloqueado/i)).toBeVisible();
+    const deniedResult = page.locator('.scan-result').filter({hasText: 'ENTRADA NEGADA'});
+    await expect(deniedResult).toBeVisible();
+    await expect(deniedResult.locator('.scan-result__reason')).toContainText(/bloqueado/i);
 
     await organizer.reload();
     const refreshedRow = organizer.locator('article').filter({hasText: code}).first();
