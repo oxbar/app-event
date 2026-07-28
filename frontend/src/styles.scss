@@ -80,7 +80,7 @@ button, input, select, textarea { font: inherit; }
   grid-template-columns: 250px minmax(0, 1fr);
   transition: grid-template-columns .22s ease;
 }
-.shell.sidebar-collapsed { grid-template-columns: 0 minmax(0, 1fr); }
+.shell.sidebar-collapsed { grid-template-columns: 76px minmax(0, 1fr); }
 .shell aside {
   width: 250px;
   min-width: 0;
@@ -95,13 +95,18 @@ button, input, select, textarea { font: inherit; }
   z-index: 20;
   transition: transform .22s ease, opacity .18s ease, padding .22s ease;
 }
-.shell.sidebar-collapsed aside {
-  transform: translateX(-100%);
-  opacity: 0;
-  padding-inline: 0;
-  pointer-events: none;
-}
+/*
+ * Recolhida, a barra não desaparece: vira um trilho de ícones.
+ * Some com o rótulo, não com a navegação — quem já conhece o sistema
+ * continua chegando em um clique, e ganha a largura de volta.
+ */
+.shell.sidebar-collapsed aside { width: 76px; padding-inline: .75rem; }
+.shell.sidebar-collapsed .logo { justify-content: center; }
+.shell.sidebar-collapsed .logo strong { display: none; }
+.shell.sidebar-collapsed nav a { justify-content: center; padding-inline: 0; }
+.shell.sidebar-collapsed nav a span { display: none; }
 .logo { display: flex; align-items: center; gap: .75rem; margin-bottom: 2rem; white-space: nowrap; }
+.logo tui-icon { font-size: 1.5rem; flex: 0 0 auto; }
 .shell nav { display: grid; gap: .35rem; }
 .shell nav a {
   color: #c9c9d4;
@@ -109,7 +114,13 @@ button, input, select, textarea { font: inherit; }
   padding: .8rem 1rem;
   border-radius: .7rem;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: .75rem;
 }
+.shell nav a tui-icon { font-size: 1.15rem; flex: 0 0 auto; }
+/* O item ativo ganha uma marca à esquerda: cor sozinha não basta para daltônicos. */
+.shell nav a.active { box-shadow: inset 3px 0 0 var(--tui-background-accent-1, #7c5cff); }
 .shell nav a.active, .shell nav a:hover { background: #2a2345; color: #fff; }
 .workspace { min-width: 0; }
 .workspace header {
@@ -229,6 +240,9 @@ tui-pagination { display: block; margin: 1.5rem auto; }
     box-shadow: 20px 0 60px rgba(0, 0, 0, .35);
   }
   .shell aside.open, .shell.sidebar-collapsed aside.open { transform: translateX(0); }
+  .shell.sidebar-collapsed .logo strong,
+  .shell.sidebar-collapsed nav a span { display: initial; }
+  .shell.sidebar-collapsed nav a { justify-content: flex-start; padding-inline: 1rem; }
   .menu-backdrop {
     display: block;
     position: fixed;
@@ -716,4 +730,97 @@ app-select-field {
   min-width: 22px !important;
   min-height: 22px !important;
   padding: 0 !important;
+}
+
+
+/* =========================================================================
+   Portaria e usabilidade geral — adicionado no patch de UI/UX
+   ========================================================================= */
+
+/* Contadores da sessão: quem está na porta quer saber o próprio ritmo. */
+.door-tally { display: flex; gap: 1rem; flex-wrap: wrap; }
+.door-tally__item {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  font-size: .9rem;
+  padding: .4rem .8rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+.door-tally__item strong { font-size: 1.05rem; }
+.door-tally__item--ok { color: #12805c; }
+.door-tally__item--deny { color: #a1231f; }
+
+.camera-hint {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin: .5rem 0 0;
+  font-size: .875rem;
+  color: var(--text-muted, #6b6b7b);
+}
+
+/* O veredito precisa ser lido de relance, a um braço de distância. */
+.scan-result__icon { font-size: 3.25rem; }
+.scan-result__reason { font-size: 1.05rem; font-weight: 600; }
+.scan-result__wristband {
+  display: inline-flex;
+  align-items: center;
+  gap: .6rem;
+  margin: .75rem 0 .25rem;
+  padding: .5rem 1.1rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .18);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.scan-result__swatch {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, .85);
+  flex: 0 0 auto;
+}
+.scan-result__meta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: .75rem;
+  font-size: .85rem;
+  opacity: .85;
+}
+.scan-result__meta span { display: inline-flex; align-items: center; gap: .35rem; }
+
+.panel.empty { display: grid; justify-items: center; gap: .4rem; text-align: center; }
+.panel.empty tui-icon { font-size: 2.5rem; opacity: .45; }
+
+/* Pulseira no ingresso digital. */
+.wristband small {
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-size: .65rem;
+  opacity: .65;
+}
+
+/* Alvo de toque mínimo: a portaria opera de pé, com uma mão, no escuro. */
+@media (pointer: coarse) {
+  button[tuiButton],
+  a[tuiButton] { min-block-size: 2.75rem; }
+}
+
+/* Foco sempre visível — navegação por teclado não pode ficar às cegas. */
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--tui-background-accent-1, #7c5cff);
+  outline-offset: 2px;
+  border-radius: .35rem;
+}
+
+/* Quem pediu menos animação recebe menos animação. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    transition-duration: .001ms !important;
+  }
 }

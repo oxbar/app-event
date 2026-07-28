@@ -2,7 +2,7 @@ import {ChangeDetectionStrategy, Component, computed, DestroyRef, HostListener, 
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {FormControl, ReactiveFormsModule} from '@angular/forms';
 import {NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet} from '@angular/router';
-import {TuiButton, TuiInput} from '@taiga-ui/core';
+import {TuiButton, TuiIcon, TuiInput} from '@taiga-ui/core';
 import {filter} from 'rxjs';
 import {apiErrorMessage} from '../core/api-error';
 import {AuthService} from '../core/auth.service';
@@ -11,35 +11,46 @@ import {SelectFieldComponent, SelectOption} from '../shared/select-field.compone
 
 @Component({
   standalone: true,
-  imports: [ReactiveFormsModule, RouterOutlet, RouterLink, RouterLinkActive, TuiButton, TuiInput, SelectFieldComponent],
+  imports: [ReactiveFormsModule, RouterOutlet, RouterLink, RouterLinkActive, TuiButton, TuiIcon, TuiInput, SelectFieldComponent],
   template: `
     <a class="skip-link" href="#main-content">Ir para o conteúdo principal</a>
     <div class="shell" [class.sidebar-collapsed]="sidebarCollapsed()">
       <aside id="main-menu" [class.open]="mobileMenuOpen()" aria-label="Menu principal">
-        <div class="logo"><span>EA</span><strong>Event Access</strong></div>
+        <div class="logo"><tui-icon icon="@tui.building-2" /><strong>Event Access</strong></div>
         <nav>
-          <a routerLink="/dashboard" routerLinkActive="active" (click)="closeMobileMenu()">Visão geral</a>
+          <a routerLink="/dashboard" routerLinkActive="active" title="Visão geral"
+               (click)="closeMobileMenu()"><tui-icon icon="@tui.layout-dashboard" /><span>Visão geral</span></a>
           @if (auth.hasRole('SUPER_ADMIN', 'ORGANIZER_ADMIN', 'EVENT_MANAGER', 'VIEWER')) {
-            <a routerLink="/events" routerLinkActive="active" (click)="closeMobileMenu()">Eventos</a>
-            <a routerLink="/tickets" routerLinkActive="active" (click)="closeMobileMenu()">Ingressos</a>
-            <a routerLink="/attendees" routerLinkActive="active" (click)="closeMobileMenu()">Participantes</a>
+            <a routerLink="/events" routerLinkActive="active" title="Eventos"
+               (click)="closeMobileMenu()"><tui-icon icon="@tui.calendar-days" /><span>Eventos</span></a>
+            <a routerLink="/tickets" routerLinkActive="active" title="Ingressos"
+               (click)="closeMobileMenu()"><tui-icon icon="@tui.ticket" /><span>Ingressos</span></a>
+            <a routerLink="/attendees" routerLinkActive="active" title="Participantes"
+               (click)="closeMobileMenu()"><tui-icon icon="@tui.users" /><span>Participantes</span></a>
             @if (auth.hasRole('SUPER_ADMIN', 'ORGANIZER_ADMIN')) {
-              <a routerLink="/operations" routerLinkActive="active" (click)="closeMobileMenu()">Equipe e portarias</a>
+              <a routerLink="/operations" routerLinkActive="active" title="Equipe e portarias"
+               (click)="closeMobileMenu()"><tui-icon icon="@tui.door-open" /><span>Equipe e portarias</span></a>
             }
           }
           @if (auth.hasRole('SUPER_ADMIN', 'ORGANIZER_ADMIN', 'EVENT_MANAGER', 'DOOR_STAFF')) {
-            <a routerLink="/door" routerLinkActive="active" (click)="closeMobileMenu()">Portaria</a>
+            <a routerLink="/door" routerLinkActive="active" title="Portaria"
+               (click)="closeMobileMenu()"><tui-icon icon="@tui.scan-line" /><span>Portaria</span></a>
           }
           @if (auth.hasRole('SUPER_ADMIN', 'ORGANIZER_ADMIN', 'FINANCE', 'VIEWER')) {
-            <a routerLink="/orders" routerLinkActive="active" (click)="closeMobileMenu()">Pedidos</a>
-            <a routerLink="/reports" routerLinkActive="active" (click)="closeMobileMenu()">Relatórios</a>
+            <a routerLink="/orders" routerLinkActive="active" title="Pedidos"
+               (click)="closeMobileMenu()"><tui-icon icon="@tui.receipt-text" /><span>Pedidos</span></a>
+            <a routerLink="/reports" routerLinkActive="active" title="Relatórios"
+               (click)="closeMobileMenu()"><tui-icon icon="@tui.chart-column" /><span>Relatórios</span></a>
           }
           @if (auth.hasRole('SUPER_ADMIN', 'ORGANIZER_ADMIN', 'FINANCE')) {
-            <a routerLink="/payments" routerLinkActive="active" (click)="closeMobileMenu()">Pagamentos</a>
-            <a routerLink="/refunds" routerLinkActive="active" (click)="closeMobileMenu()">Reembolsos</a>
+            <a routerLink="/payments" routerLinkActive="active" title="Pagamentos"
+               (click)="closeMobileMenu()"><tui-icon icon="@tui.wallet" /><span>Pagamentos</span></a>
+            <a routerLink="/refunds" routerLinkActive="active" title="Reembolsos"
+               (click)="closeMobileMenu()"><tui-icon icon="@tui.rotate-ccw" /><span>Reembolsos</span></a>
           }
           @if (auth.hasRole('SUPER_ADMIN', 'ORGANIZER_ADMIN')) {
-            <a routerLink="/audit" routerLinkActive="active" (click)="closeMobileMenu()">Auditoria</a>
+            <a routerLink="/audit" routerLinkActive="active" title="Auditoria"
+               (click)="closeMobileMenu()"><tui-icon icon="@tui.shield-check" /><span>Auditoria</span></a>
           }
         </nav>
       </aside>
@@ -65,7 +76,7 @@ import {SelectFieldComponent, SelectOption} from '../shared/select-field.compone
             [attr.aria-expanded]="isMenuExpanded()"
             (click)="toggleMenu()"
           >
-            <span aria-hidden="true">☰</span>
+            <tui-icon icon="@tui.menu" />
           </button>
 
           @if (auth.organizationOptions().length > 1) {
@@ -86,10 +97,18 @@ import {SelectFieldComponent, SelectOption} from '../shared/select-field.compone
             <strong>{{auth.user()?.name}}</strong>
             <small>{{auth.user()?.email}}</small>
           </div>
-          <button tuiButton appearance="secondary" type="button" (click)="theme.toggle()">
+          <button
+            tuiButton
+            appearance="secondary"
+            type="button"
+            [iconStart]="theme.dark() ? '@tui.sun' : '@tui.moon'"
+            (click)="theme.toggle()"
+          >
             {{theme.dark() ? 'Tema claro' : 'Tema escuro'}}
           </button>
-          <button tuiButton appearance="flat" type="button" (click)="auth.logout()">Sair</button>
+          <button tuiButton appearance="flat" type="button" iconStart="@tui.log-out" (click)="auth.logout()">
+            Sair
+          </button>
         </header>
         <main id="main-content" tabindex="-1"><router-outlet /></main>
       </section>

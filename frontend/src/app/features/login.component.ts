@@ -1,13 +1,13 @@
 import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {ActivatedRoute, Router, RouterLink} from '@angular/router';
-import {TuiButton, TuiCheckbox, TuiInput, TuiLoader} from '@taiga-ui/core';
+import {TuiButton, TuiCheckbox, TuiIcon, TuiInput, TuiLoader} from '@taiga-ui/core';
 import {AuthService} from '../core/auth.service';
 import {FormErrorComponent} from '../shared/form-error.component';
 
 @Component({
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, TuiButton, TuiLoader, TuiInput, TuiCheckbox, FormErrorComponent],
+  imports: [ReactiveFormsModule, RouterLink, TuiButton, TuiIcon, TuiLoader, TuiInput, TuiCheckbox, FormErrorComponent],
   template: `
     <main class="auth-page">
       <section class="auth-card">
@@ -27,7 +27,15 @@ import {FormErrorComponent} from '../shared/form-error.component';
             <label for="login-password">Senha</label>
             <div class="password-row">
               <tui-textfield><input id="login-password" tuiInput [type]="showPassword() ? 'text' : 'password'" formControlName="password" autocomplete="current-password" /></tui-textfield>
-              <button tuiButton appearance="flat" type="button" (click)="togglePassword()">
+              <button
+                tuiButton
+                appearance="flat"
+                type="button"
+                [iconStart]="showPassword() ? '@tui.eye-off' : '@tui.eye'"
+                [attr.aria-label]="showPassword() ? 'Ocultar senha' : 'Mostrar senha'"
+                [attr.aria-pressed]="showPassword()"
+                (click)="togglePassword()"
+              >
                 {{showPassword() ? 'Ocultar' : 'Mostrar'}}
               </button>
             </div>
@@ -36,7 +44,7 @@ import {FormErrorComponent} from '../shared/form-error.component';
           <label class="checkbox-row"><input tuiCheckbox type="checkbox" formControlName="remember" /> Manter sessão neste dispositivo</label>
           @if (error()) {<div class="error-panel" role="alert">{{error()}}</div>}
           <button tuiButton type="submit" [disabled]="loading()">
-            @if (loading()) {<tui-loader size="s" />} @else {Entrar}
+            @if (loading()) {<tui-loader size="s" />} @else {<tui-icon icon="@tui.log-in" />Entrar}
           </button>
         </form>
         <a routerLink="/forgot-password">Esqueci minha senha</a>

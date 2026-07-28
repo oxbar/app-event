@@ -1,6 +1,7 @@
-import {ChangeDetectionStrategy, Component, computed, ElementRef, inject, signal, ViewChild} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, inject, signal, ViewChild} from '@angular/core';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
-import {TuiButton, TuiInput} from '@taiga-ui/core';
+import {DatePipe} from '@angular/common';
+import {TuiButton, TuiIcon, TuiInput} from '@taiga-ui/core';
 import {BrowserQRCodeReader} from '@zxing/browser';
 import {apiErrorMessage} from '../core/api-error';
 import {CheckinApi, EventApi} from '../core/api.services';
@@ -11,13 +12,23 @@ import {SelectFieldComponent, SelectOption} from '../shared/select-field.compone
 
 @Component({
   standalone: true,
-  imports: [ReactiveFormsModule, TuiButton, TuiInput, SelectFieldComponent, DisplayLabelPipe, FormErrorComponent],
+  imports: [DatePipe, ReactiveFormsModule, TuiButton, TuiIcon, TuiInput, SelectFieldComponent, DisplayLabelPipe, FormErrorComponent],
   template: `
-    <div class="page-title"><div><h1>Portaria</h1><p>Leitura rápida com prevenção de acesso duplicado.</p></div></div>
+    <div class="page-title">
+      <div><h1>Portaria</h1><p>Leitura contínua com prevenção de acesso duplicado.</p></div>
+      <div class="door-tally" aria-live="polite">
+        <span class="door-tally__item door-tally__item--ok">
+          <tui-icon icon="@tui.check" /><strong>{{approvedCount()}}</strong> liberadas
+        </span>
+        <span class="door-tally__item door-tally__item--deny">
+          <tui-icon icon="@tui.x" /><strong>{{deniedCount()}}</strong> negadas
+        </span>
+      </div>
+    </div>
     @if (error()) {<section class="error-panel" role="alert">{{error()}}</section>}
     <section class="door-layout">
       <div class="panel">
-        <form [formGroup]="form" novalidate>
+        <form [formGroup]="form" novalidate (ngSubmit)="manual()">
           <label for="door-event">Evento</label>
           <app-select-field
             [control]="form.controls.eventId"
@@ -38,9 +49,25 @@ import {SelectFieldComponent, SelectOption} from '../shared/select-field.compone
 
           <video #video playsinline aria-label="Visualização da câmera para leitura do QR Code"></video>
           <div class="button-row">
-            <button tuiButton type="button" (click)="start()" [disabled]="cameraActive() || !form.controls.eventId.value || !form.controls.pointId.value">Iniciar câmera</button>
-            <button tuiButton appearance="secondary" type="button" (click)="stop()" [disabled]="!cameraActive()">Parar câmera</button>
+            <button
+              tuiButton
+              type="button"
+              iconStart="@tui.camera"
+              (click)="start()"
+              [disabled]="cameraActive() || !form.controls.eventId.value || !form.controls.pointId.value"
+            >
+              Iniciar câmera
+            </button>
+            <button tuiButton appearance="secondary" type="button" iconStart="@tui.camera-off" (click)="stop()" [disabled]="!cameraActive()">
+              Parar câmera
+            </button>
           </div>
+          @if (cameraActive()) {
+            <p class="camera-hint" role="status">
+              <tui-icon icon="@tui.scan-line" />
+              Leitura contínua ligada — aponte para o próximo ingresso sem tocar na tela.
+            </p>
+          }
 
           <div class="form-field">
             <label for="door-token">Código do ingresso</label>
@@ -48,7 +75,7 @@ import {SelectFieldComponent, SelectOption} from '../shared/select-field.compone
             <small class="form-hint">Aceita o código TKT-, o link completo do ingresso ou o conteúdo do QR Code.</small>
             <app-form-error [control]="form.controls.token" label="Código do ingresso" />
           </div>
-          <button tuiButton type="button" (click)="manual()" [disabled]="submitting()">
+          <button tuiButton type="submit" iconStart="@tui.keyboard" [disabled]="submitting()">
             {{submitting() ? 'Validando...' : 'Validar manualmente'}}
           </button>
         </form>
@@ -56,14 +83,37 @@ import {SelectFieldComponent, SelectOption} from '../shared/select-field.compone
 
       @if (result(); as current) {
         <article class="scan-result" [class.approved]="current.approved" role="status" aria-live="assertive">
+          <tui-icon class="scan-result__icon" [icon]="current.approved ? '@tui.circle-check-big' : '@tui.circle-x'" />
           <strong>{{current.approved ? 'ENTRADA LIBERADA' : 'ENTRADA NEGADA'}}</strong>
           <h2>{{current.attendeeName || 'Participante não identificado'}}</h2>
-          <p>{{current.ticketType}} @if (current.wristbandLabel) {· {{current.wristbandLabel}}}</p>
-          <p>{{current.message || (current.result | displayLabel)}}</p>
-          @if (current.accessPoint) {<small>Portaria: {{current.accessPoint}}</small>}
+          <p>{{current.ticketType}}</p>
+
+          <!-- A cor da pulseira é a ação que a portaria executa depois de liberar.
+               Merece o mesmo destaque do veredito, não uma linha de texto. -->
+          @if (current.approved && (current.wristbandLabel || current.wristbandColorName)) {
+            <div class="scan-result__wristband">
+              <span class="scan-result__swatch" [style.background]="current.wristbandColorHex || 'transparent'"></span>
+              {{current.wristbandLabel || current.wristbandColorName}}
+            </div>
+          }
+
+          @if (!current.approved) {
+            <p class="scan-result__reason">{{current.message || (current.result | displayLabel)}}</p>
+          }
+
+          <div class="scan-result__meta">
+            @if (current.checkedInAt) {
+              <span><tui-icon icon="@tui.clock" />{{current.checkedInAt | date:'HH:mm:ss'}}</span>
+            }
+            @if (current.accessPoint) {<span>{{current.accessPoint}}</span>}
+          </div>
         </article>
       } @else {
-        <article class="panel empty">Aguardando a leitura de um ingresso.</article>
+        <article class="panel empty">
+          <tui-icon icon="@tui.scan-line" />
+          <p>Aguardando a leitura de um ingresso.</p>
+          <small>Ligue a câmera e aponte para o QR Code, ou digite o código TKT-.</small>
+        </article>
       }
     </section>
   `,
@@ -74,8 +124,13 @@ export class DoorComponent {
   private readonly eventsApi = inject(EventApi);
   private readonly api = inject(CheckinApi);
   private readonly fb = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly reader = new BrowserQRCodeReader();
   private controls?: {stop(): void};
+  private wakeLock: {release(): Promise<void>} | null = null;
+  private lastToken = '';
+  private lastTokenAt = 0;
+  private clearTimer?: ReturnType<typeof setTimeout>;
 
   readonly events = signal<EventModel[]>([]);
   readonly points = signal<AccessPoint[]>([]);
@@ -83,6 +138,8 @@ export class DoorComponent {
   readonly error = signal('');
   readonly submitting = signal(false);
   readonly cameraActive = signal(false);
+  readonly approvedCount = signal(0);
+  readonly deniedCount = signal(0);
   readonly eventOptions = computed<readonly SelectOption[]>(() => [
     {value: '', label: 'Selecione o evento'},
     ...this.events().map(event => ({value: event.id, label: event.name})),
@@ -110,6 +167,11 @@ export class DoorComponent {
       },
       error: error => this.error.set(apiErrorMessage(error, 'Não foi possível carregar os eventos da portaria.')),
     });
+
+    this.destroyRef.onDestroy(() => {
+      clearTimeout(this.clearTimer);
+      this.stop();
+    });
   }
 
   private loadPoints(eventId: string): void {
@@ -132,16 +194,55 @@ export class DoorComponent {
         undefined,
         this.video.nativeElement,
         result => {
-          if (result) {
-            this.form.controls.token.setValue(result.getText());
-            this.scan(result.getText(), false);
-            this.stop();
-          }
+          if (!result) return;
+          const text = result.getText();
+          const now = Date.now();
+          // O zxing dispara várias vezes por segundo sobre o mesmo código.
+          // Sem esta guarda, um ingresso viraria dezenas de requisições.
+          if (text === this.lastToken && now - this.lastTokenAt < 3000) return;
+          this.lastToken = text;
+          this.lastTokenAt = now;
+          this.scan(text, false);
         },
       );
+      this.requestWakeLock();
     } catch {
       this.cameraActive.set(false);
       this.error.set('Não foi possível acessar a câmera. Verifique a permissão do navegador.');
+    }
+  }
+
+  /** A tela apagar no meio da fila é falha de produto, não do operador. */
+  private requestWakeLock(): void {
+    const api = (navigator as unknown as {
+      wakeLock?: {request(type: 'screen'): Promise<{release(): Promise<void>}>};
+    }).wakeLock;
+    api?.request('screen').then(lock => (this.wakeLock = lock)).catch(() => undefined);
+  }
+
+  /**
+   * Retorno sonoro. Na porta de um evento ninguém olha a tela o tempo todo:
+   * agudo curto para liberado, dois graves para negado.
+   */
+  private beep(approved: boolean): void {
+    try {
+      const Ctor = window.AudioContext
+        ?? (window as unknown as {webkitAudioContext?: typeof AudioContext}).webkitAudioContext;
+      if (!Ctor) return;
+      const context = new Ctor();
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.type = approved ? 'sine' : 'square';
+      oscillator.frequency.value = approved ? 880 : 200;
+      gain.gain.setValueAtTime(0.0001, context.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.3, context.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + (approved ? 0.18 : 0.5));
+      oscillator.connect(gain).connect(context.destination);
+      oscillator.start();
+      oscillator.stop(context.currentTime + (approved ? 0.2 : 0.55));
+      oscillator.onended = () => void context.close().catch(() => undefined);
+    } catch {
+      // Sem áudio disponível a cor e a vibração já comunicam o veredito.
     }
   }
 
@@ -149,6 +250,8 @@ export class DoorComponent {
     this.controls?.stop();
     this.controls = undefined;
     this.cameraActive.set(false);
+    void this.wakeLock?.release().catch(() => undefined);
+    this.wakeLock = null;
   }
 
   manual(): void {
@@ -165,14 +268,22 @@ export class DoorComponent {
     if (!eventId || !pointId || !token || this.submitting()) return;
     this.submitting.set(true);
     this.error.set('');
-    this.result.set(null);
+    clearTimeout(this.clearTimer);
     (manual ? this.api.manual(eventId, token, pointId) : this.api.scan(eventId, token, pointId)).subscribe({
       next: result => {
         this.result.set(result);
         this.submitting.set(false);
         this.form.controls.token.setValue('');
-        if (result.approved) navigator.vibrate?.(150);
-        else navigator.vibrate?.([100, 80, 100]);
+        if (result.approved) {
+          this.approvedCount.update(value => value + 1);
+          navigator.vibrate?.(150);
+        } else {
+          this.deniedCount.update(value => value + 1);
+          navigator.vibrate?.([100, 80, 100]);
+        }
+        this.beep(result.approved);
+        // A recusa fica mais tempo na tela: exige leitura, não só o sinal de cor.
+        this.clearTimer = setTimeout(() => this.result.set(null), result.approved ? 4000 : 8000);
       },
       error: error => {
         this.error.set(apiErrorMessage(error, 'Não foi possível validar o ingresso.'));

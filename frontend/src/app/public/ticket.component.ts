@@ -1,7 +1,7 @@
 import {DatePipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
-import {TuiButton, TuiLoader} from '@taiga-ui/core';
+import {TuiButton, TuiIcon, TuiLoader} from '@taiga-ui/core';
 import {apiErrorMessage} from '../core/api-error';
 import {CheckoutApi} from '../core/api.services';
 import {Ticket} from '../core/models';
@@ -10,7 +10,7 @@ import {TicketDownloadService} from '../shared/ticket-download.service';
 
 @Component({
   standalone: true,
-  imports: [DatePipe, TuiButton, TuiLoader, DisplayLabelPipe],
+  imports: [DatePipe, TuiButton, TuiIcon, TuiLoader, DisplayLabelPipe],
   template: `
     <main class="ticket-page">
       @if (error()) {
@@ -41,18 +41,19 @@ import {TicketDownloadService} from '../shared/ticket-download.service';
           <code>{{current.publicCode}}</code>
           <div class="wristband">
             <span [style.background]="current.wristbandColorHex"></span>
-            {{current.wristbandLabel}}
+            <small>Pulseira</small>
+            {{current.wristbandLabel || current.wristbandColorName}}
           </div>
 
           <div class="ticket-actions">
-            <button tuiButton type="button" (click)="fullscreen()">Exibir em tela cheia</button>
-            <button tuiButton appearance="secondary" type="button" (click)="downloadTicket(current)">
+            <button tuiButton type="button" iconStart="@tui.maximize" (click)="fullscreen()">Exibir em tela cheia</button>
+            <button tuiButton appearance="secondary" type="button" iconStart="@tui.download" (click)="downloadTicket(current)">
               Baixar ingresso em PNG
             </button>
-            <button tuiButton appearance="secondary" type="button" (click)="downloadQr(current)">
+            <button tuiButton appearance="secondary" type="button" iconStart="@tui.download" (click)="downloadQr(current)">
               Baixar QR Code
             </button>
-            <button tuiButton appearance="flat" type="button" (click)="copy(current.publicCode)">
+            <button tuiButton appearance="flat" type="button" [iconStart]="copied() ? '@tui.check' : '@tui.copy'" (click)="copy(current.publicCode)">
               {{copied() ? 'Código copiado' : 'Copiar código TKT'}}
             </button>
           </div>
