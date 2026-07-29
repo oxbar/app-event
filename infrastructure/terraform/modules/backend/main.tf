@@ -1,5 +1,4 @@
 data "aws_region" "current" {}
-data "aws_caller_identity" "current" {}
 
 # Prefix list da CloudFront: o ALB so aceita trafego vindo da borda.
 data "aws_ec2_managed_prefix_list" "cloudfront" {
