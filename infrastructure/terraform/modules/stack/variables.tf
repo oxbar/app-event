@@ -72,7 +72,7 @@ variable "extra_cors_origins" {
 # --- Banco ----------------------------------------------------------------
 variable "db_engine_version" {
   type    = string
-  default = "17.4"
+  default = "17.10"
 }
 
 variable "db_instance_class" {

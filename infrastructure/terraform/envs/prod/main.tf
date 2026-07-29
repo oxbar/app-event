@@ -35,13 +35,13 @@ module "stack" {
   db_enhanced_monitoring_interval = 60
 
   # --- Backend ------------------------------------------------------------
-  task_cpu         = 1024
-  task_memory      = 2048
-  cpu_architecture = "X86_64"
-  desired_count    = 2
-  min_capacity     = 2
-  max_capacity     = 10
-  use_fargate_spot = false
+  task_cpu           = 1024
+  task_memory        = 2048
+  cpu_architecture   = "X86_64"
+  desired_count      = 2
+  min_capacity       = 2
+  max_capacity       = 10
+  use_fargate_spot   = false
   log_retention_days = 90
 
   # --- Aplicacao ----------------------------------------------------------

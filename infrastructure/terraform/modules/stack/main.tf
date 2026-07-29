@@ -187,27 +187,27 @@ module "backend" {
 
   environment = merge(
     {
-      APP_ENVIRONMENT           = var.app_environment
-      APP_BASE_URL              = local.public_url
-      BACKEND_BASE_URL          = local.public_url
-      CORS_ALLOWED_ORIGINS      = join(",", compact(concat([local.public_url], var.extra_cors_origins)))
-      SPRING_DATASOURCE_URL     = module.database.jdbc_url
-      JWT_ACCESS_EXPIRATION     = tostring(var.jwt_access_expiration_seconds)
-      JWT_REFRESH_EXPIRATION    = tostring(var.jwt_refresh_expiration_seconds)
-      PAYMENT_PROVIDER          = var.payment_provider
-      ASAAS_BASE_URL            = var.asaas_base_url
-      ASAAS_USER_AGENT          = var.asaas_user_agent
-      ASAAS_SANDBOX             = tostring(var.asaas_sandbox)
-      MAIL_ENABLED              = "true"
-      MAIL_HOST                 = var.enable_ses ? module.mail[0].smtp_host : var.smtp_host
-      MAIL_PORT                 = var.enable_ses ? tostring(module.mail[0].smtp_port) : tostring(var.smtp_port)
-      MAIL_SMTP_AUTH            = "true"
-      MAIL_SMTP_STARTTLS        = "true"
-      MAIL_FROM                 = var.mail_from_address
-      MAIL_FROM_NAME            = var.mail_from_name
+      APP_ENVIRONMENT            = var.app_environment
+      APP_BASE_URL               = local.public_url
+      BACKEND_BASE_URL           = local.public_url
+      CORS_ALLOWED_ORIGINS       = join(",", compact(concat([local.public_url], var.extra_cors_origins)))
+      SPRING_DATASOURCE_URL      = module.database.jdbc_url
+      JWT_ACCESS_EXPIRATION      = tostring(var.jwt_access_expiration_seconds)
+      JWT_REFRESH_EXPIRATION     = tostring(var.jwt_refresh_expiration_seconds)
+      PAYMENT_PROVIDER           = var.payment_provider
+      ASAAS_BASE_URL             = var.asaas_base_url
+      ASAAS_USER_AGENT           = var.asaas_user_agent
+      ASAAS_SANDBOX              = tostring(var.asaas_sandbox)
+      MAIL_ENABLED               = "true"
+      MAIL_HOST                  = var.enable_ses ? module.mail[0].smtp_host : var.smtp_host
+      MAIL_PORT                  = var.enable_ses ? tostring(module.mail[0].smtp_port) : tostring(var.smtp_port)
+      MAIL_SMTP_AUTH             = "true"
+      MAIL_SMTP_STARTTLS         = "true"
+      MAIL_FROM                  = var.mail_from_address
+      MAIL_FROM_NAME             = var.mail_from_name
       PASSWORD_RESET_TTL_MINUTES = tostring(var.password_reset_ttl_minutes)
-      REPORTS_TIMEZONE          = var.reports_timezone
-      JAVA_TOOL_OPTIONS         = var.java_tool_options
+      REPORTS_TIMEZONE           = var.reports_timezone
+      JAVA_TOOL_OPTIONS          = var.java_tool_options
     },
     var.extra_environment
   )

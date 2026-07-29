@@ -19,7 +19,7 @@ variable "enable_github_oidc" {
 variable "github_subject_claims" {
   description = "Claims 'sub' autorizados a assumir as roles de CI (repo:OWNER/REPO:ref:refs/heads/main, repo:OWNER/REPO:environment:prod, ...)."
   type        = list(string)
-  default     = [
+  default = [
     "repo:oxbar/app-event:ref:refs/heads/main",
     "repo:oxbar/app-event:environment:dev",
     "repo:oxbar/app-event:environment:prod",

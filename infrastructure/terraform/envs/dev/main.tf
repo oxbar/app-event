@@ -26,6 +26,7 @@ module "stack" {
   public_base_url = ""
 
   # --- Banco --------------------------------------------------------------
+  db_engine_version          = "17.10"
   db_instance_class          = "db.t4g.micro"
   db_allocated_storage       = 20
   db_multi_az                = false
@@ -34,13 +35,13 @@ module "stack" {
   db_skip_final_snapshot     = true
 
   # --- Backend ------------------------------------------------------------
-  task_cpu         = 512
-  task_memory      = 1024
-  cpu_architecture = "X86_64"
-  desired_count    = 1
-  min_capacity     = 1
-  max_capacity     = 3
-  use_fargate_spot = true
+  task_cpu           = 512
+  task_memory        = 1024
+  cpu_architecture   = "X86_64"
+  desired_count      = 1
+  min_capacity       = 1
+  max_capacity       = 3
+  use_fargate_spot   = true
   log_retention_days = 14
 
   # --- Aplicacao ----------------------------------------------------------

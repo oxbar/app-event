@@ -245,9 +245,9 @@ resource "aws_iam_role_policy" "flow" {
 resource "aws_flow_log" "this" {
   count = var.enable_flow_logs ? 1 : 0
 
-  iam_role_arn         = aws_iam_role.flow[0].arn
-  log_destination      = aws_cloudwatch_log_group.flow[0].arn
-  traffic_type         = "REJECT"
-  vpc_id               = aws_vpc.this.id
+  iam_role_arn             = aws_iam_role.flow[0].arn
+  log_destination          = aws_cloudwatch_log_group.flow[0].arn
+  traffic_type             = "REJECT"
+  vpc_id                   = aws_vpc.this.id
   max_aggregation_interval = 600
 }

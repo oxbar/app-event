@@ -1,5 +1,5 @@
 variable "name_prefix" { type = string }
-variable "vpc_id"      { type = string }
+variable "vpc_id" { type = string }
 
 variable "subnet_ids" {
   description = "Subnets de dados (privadas, sem rota para a internet)."
@@ -17,7 +17,7 @@ variable "kms_key_arn" { type = string }
 variable "engine_version" {
   description = "Versao do PostgreSQL (o compose local usa 17)."
   type        = string
-  default     = "17.4"
+  default     = "17.10"
 }
 
 variable "parameter_group_family" {

@@ -170,8 +170,8 @@ data "aws_iam_policy_document" "ci_assume_role" {
 
 # Role usada pelo pipeline de infraestrutura (terraform plan/apply).
 resource "aws_iam_role" "terraform" {
-  name               = "${var.project}-ci-terraform"
-  assume_role_policy = data.aws_iam_policy_document.ci_assume_role.json
+  name                 = "${var.project}-ci-terraform"
+  assume_role_policy   = data.aws_iam_policy_document.ci_assume_role.json
   max_session_duration = 3600
 }
 
@@ -251,8 +251,8 @@ resource "aws_iam_role_policy" "terraform_iam" {
 
 # Role usada pelo pipeline de aplicacao (build da imagem + rollout).
 resource "aws_iam_role" "deploy" {
-  name               = "${var.project}-ci-deploy"
-  assume_role_policy = data.aws_iam_policy_document.ci_assume_role.json
+  name                 = "${var.project}-ci-deploy"
+  assume_role_policy   = data.aws_iam_policy_document.ci_assume_role.json
   max_session_duration = 3600
 }
 
