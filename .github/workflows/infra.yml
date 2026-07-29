@@ -103,10 +103,15 @@ jobs:
           "${RUNNER_TEMP}/tfsec" --version
 
       - name: Executar tfsec
+        shell: bash
         run: |
-          "${RUNNER_TEMP}/tfsec"             --exclude-downloaded-modules             --exclude-path ".terraform"             --soft-fail             infrastructure/terraform
-          version: v1.28.14
-          github_token: ${{ github.token }}
+          set -Eeuo pipefail
+
+          "${RUNNER_TEMP}/tfsec" \
+            --exclude-downloaded-modules \
+            --exclude-path ".terraform" \
+            --soft-fail \
+            infrastructure/terraform
 
   plan:
     name: plan (${{ matrix.environment }})
