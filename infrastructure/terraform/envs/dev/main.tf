@@ -23,7 +23,7 @@ module "stack" {
   # public_base_url para que links de e-mail e CORS fiquem corretos.
   domain_name     = ""
   route53_zone_id = ""
-  public_base_url = ""
+  public_base_url = "https://d24f1xgeci0zz2.cloudfront.net"
 
   # --- Banco --------------------------------------------------------------
   db_engine_version          = "17.10"
