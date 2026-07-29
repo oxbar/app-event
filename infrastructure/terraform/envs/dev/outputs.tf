@@ -1,0 +1,13 @@
+output "app_url"                    { value = module.stack.app_url }
+output "webhook_url"                { value = module.stack.webhook_url }
+output "cloudfront_distribution_id" { value = module.stack.cloudfront_distribution_id }
+output "frontend_bucket"            { value = module.stack.frontend_bucket }
+output "ecr_repository_url"         { value = module.stack.ecr_repository_url }
+output "ecs_cluster_name"           { value = module.stack.ecs_cluster_name }
+output "ecs_service_name"           { value = module.stack.ecs_service_name }
+output "ecs_task_family"            { value = module.stack.ecs_task_family }
+output "backend_log_group"          { value = module.stack.backend_log_group }
+output "app_secret_name"            { value = module.stack.app_secret_name }
+output "db_endpoint"                { value = module.stack.db_endpoint }
+output "sns_alerts_topic_arn"       { value = module.stack.sns_alerts_topic_arn }
+output "ses_dkim_tokens"            { value = module.stack.ses_dkim_tokens }
