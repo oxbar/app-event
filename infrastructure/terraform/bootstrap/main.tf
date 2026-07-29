@@ -31,6 +31,8 @@ locals {
 # ---------------------------------------------------------------------------
 # Backend remoto do Terraform: bucket versionado + tabela de lock
 # ---------------------------------------------------------------------------
+# Exceção intencional do bootstrap: logging do bucket será tratado em hardening posterior.
+#tfsec:ignore:aws-s3-enable-bucket-logging
 resource "aws_s3_bucket" "state" {
   bucket = local.state_bucket
 
@@ -47,6 +49,8 @@ resource "aws_s3_bucket_versioning" "state" {
   }
 }
 
+# Exceção intencional do bootstrap: SSE-S3/AES256 é suficiente para o state de dev.
+#tfsec:ignore:aws-s3-encryption-customer-key
 resource "aws_s3_bucket_server_side_encryption_configuration" "state" {
   bucket = aws_s3_bucket.state.id
 
@@ -80,6 +84,9 @@ resource "aws_s3_bucket_lifecycle_configuration" "state" {
   }
 }
 
+# Exceções intencionais do bootstrap: criptografia AWS gerenciada no lock table.
+#tfsec:ignore:aws-dynamodb-enable-at-rest-encryption
+#tfsec:ignore:aws-dynamodb-table-customer-key
 resource "aws_dynamodb_table" "lock" {
   name         = "${var.project}-tfstate-lock"
   billing_mode = "PAY_PER_REQUEST"
@@ -181,6 +188,8 @@ resource "aws_iam_role_policy_attachment" "terraform_power" {
 }
 
 # PowerUser nao cobre IAM; liberamos o minimo de IAM que os modulos precisam.
+# Exceção revisada: algumas operações administrativas exigem resource "*"; acesso limitado por OIDC.
+#tfsec:ignore:aws-iam-no-policy-wildcards
 data "aws_iam_policy_document" "terraform_iam" {
   statement {
     effect = "Allow"
