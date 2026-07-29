@@ -129,13 +129,19 @@ export class ForgotPasswordComponent {
   }
 
   submit(): void {
+    if (this.loading() || this.cooldown() > 0) return;
+
+    const emailControl = this.form.controls.email;
+    const email = emailControl.value.trim().toLocaleLowerCase('pt-BR');
+    if (email !== emailControl.value) {
+      emailControl.setValue(email);
+    }
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
-    if (this.loading() || this.cooldown() > 0) return;
 
-    const email = this.form.getRawValue().email.trim().toLocaleLowerCase('pt-BR');
     this.loading.set(true);
     this.error.set('');
 
