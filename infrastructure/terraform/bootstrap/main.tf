@@ -324,8 +324,10 @@ data "aws_iam_policy_document" "deploy" {
     ]
 
     resources = [
-      "arn:aws:s3:::${var.project}-frontend-*",
-      "arn:aws:s3:::${var.project}-frontend-*/*"
+      "arn:aws:s3:::${var.project}-dev-frontend-${local.account_id}",
+      "arn:aws:s3:::${var.project}-dev-frontend-${local.account_id}/*",
+      "arn:aws:s3:::${var.project}-prod-frontend-${local.account_id}",
+      "arn:aws:s3:::${var.project}-prod-frontend-${local.account_id}/*"
     ]
   }
 
