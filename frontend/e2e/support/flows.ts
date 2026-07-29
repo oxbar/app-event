@@ -9,6 +9,7 @@ import {scenario} from './data';
  */
 export async function buyCommonTicket(page: Page, data: Scenario, buyerName?: string): Promise<OrderView> {
   await page.goto(`/e/${data.event.slug}`);
+  await selectCommonTicket(page);
 
   await page.locator('#checkout-quantity').fill('1');
   await page.locator('#checkout-name').fill(buyerName ?? scenario.buyer.name);
@@ -58,4 +59,16 @@ export function orderCodeFromUrl(url: string): string {
   const match = /\/payment\/([^/?#]+)/.exec(url);
   if (!match) throw new Error(`Não foi possível extrair o código do pedido da URL: ${url}`);
   return decodeURIComponent(match[1]);
+}
+
+/** Seleciona explicitamente o ingresso comum, sem depender da ordem devolvida pela API. */
+export async function selectCommonTicket(page: Page): Promise<void> {
+  const name = scenario.ticketTypes.common.name;
+  const option = page.locator('.ticket-option').filter({
+    has: page.getByText(name, {exact: true}),
+  });
+
+  await expect(option, `o ingresso ${name} deveria estar disponível no checkout`).toHaveCount(1);
+  await option.click();
+  await expect(option).toHaveAttribute('aria-pressed', 'true');
 }

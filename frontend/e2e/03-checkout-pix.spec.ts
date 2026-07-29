@@ -1,11 +1,12 @@
 import {scenario, TOTAL_COMMON} from './support/data';
 import {expect, test} from './support/fixtures';
-import {buyCommonTicket} from './support/flows';
+import {buyCommonTicket, selectCommonTicket} from './support/flows';
 
 /** Roteiro passos 5 e 6: compra pública, Pix pendente e aprovação. */
 test.describe('Checkout público e pagamento Pix', () => {
   test('compra gera pedido pendente com o total correto', async ({page, scenarioData}) => {
     await page.goto(`/e/${scenarioData.event.slug}`);
+    await selectCommonTicket(page);
 
     await page.locator('#checkout-quantity').fill('1');
     await page.locator('#checkout-name').fill(scenario.buyer.name);
