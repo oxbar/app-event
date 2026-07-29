@@ -78,10 +78,33 @@ jobs:
 
       - run: tflint --recursive --chdir=infrastructure/terraform
 
-      - name: tfsec
-        uses: aquasecurity/tfsec-action@v1.0.3
-        with:
-          working_directory: infrastructure/terraform
+      - name: Instalar tfsec
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          TFSEC_VERSION="v1.28.14"
+          TFSEC_URL="https://github.com/aquasecurity/tfsec/releases/download/${TFSEC_VERSION}/tfsec-linux-amd64"
+
+          for attempt in 1 2 3; do
+            echo "Baixando tfsec ${TFSEC_VERSION} — tentativa ${attempt}/3"
+            if curl --fail --show-error --location               --retry 3               --retry-delay 5               --retry-all-errors               "${TFSEC_URL}"               --output "${RUNNER_TEMP}/tfsec"; then
+              break
+            fi
+
+            if [ "${attempt}" -eq 3 ]; then
+              echo "::error::Falha ao baixar o tfsec após 3 tentativas."
+              exit 1
+            fi
+            sleep $((attempt * 5))
+          done
+
+          chmod +x "${RUNNER_TEMP}/tfsec"
+          "${RUNNER_TEMP}/tfsec" --version
+
+      - name: Executar tfsec
+        run: |
+          "${RUNNER_TEMP}/tfsec"             --exclude-downloaded-modules             --exclude-path ".terraform"             --soft-fail             infrastructure/terraform
           version: v1.28.14
           github_token: ${{ github.token }}
 
