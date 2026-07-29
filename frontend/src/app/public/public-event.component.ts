@@ -140,15 +140,13 @@ import {brazilianPhoneValidator, cpfValidator} from '../shared/validators';
                 </tui-textfield>
                 <app-form-error [control]="form.controls.phone" label="Telefone" />
               </div>
-              @if (current.event.requireDocument) {
-                <div class="form-field">
-                  <label for="checkout-document">CPF</label>
-                  <tui-textfield>
-                    <input id="checkout-document" tuiInput inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" appInputMask="cpf" formControlName="documentNumber" />
-                  </tui-textfield>
-                  <app-form-error [control]="form.controls.documentNumber" label="CPF" />
-                </div>
-              }
+              <div class="form-field">
+                <label for="checkout-document">CPF</label>
+                <tui-textfield>
+                  <input id="checkout-document" tuiInput inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" appInputMask="cpf" formControlName="documentNumber" />
+                </tui-textfield>
+                <app-form-error [control]="form.controls.documentNumber" label="CPF" />
+              </div>
               <div class="form-field">
                 <label for="checkout-quantity">Quantidade</label>
                 <tui-textfield>
@@ -214,7 +212,7 @@ export class PublicEventComponent {
     name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(150)]],
     email: ['', [Validators.required, Validators.email, Validators.maxLength(150)]],
     phone: ['', [Validators.required, brazilianPhoneValidator]],
-    documentNumber: [''],
+    documentNumber: ['', [Validators.required, cpfValidator]],
     quantity: [1, [Validators.required, Validators.min(1)]],
     acceptedTerms: [false, Validators.requiredTrue],
     acceptedPrivacy: [false, Validators.requiredTrue],
@@ -225,10 +223,6 @@ export class PublicEventComponent {
     this.events.public(slug).subscribe({
       next: value => {
         this.data.set(value);
-        if (value.event.requireDocument) {
-          this.form.controls.documentNumber.setValidators([Validators.required, cpfValidator]);
-          this.form.controls.documentNumber.updateValueAndValidity({emitEvent: false});
-        }
         const firstAvailable = value.ticketTypes.find(type => type.availableQuantity > 0) ?? null;
         if (firstAvailable) this.select(firstAvailable);
       },
@@ -277,8 +271,8 @@ export class PublicEventComponent {
         name: value.name.trim(),
         email: value.email.trim().toLocaleLowerCase('pt-BR'),
         phone: value.phone,
-        documentType: event.event.requireDocument ? 'CPF' : undefined,
-        documentNumber: event.event.requireDocument ? value.documentNumber : undefined,
+        documentType: 'CPF',
+        documentNumber: value.documentNumber,
       },
       items: [{ticketTypeId: ticketType.id, quantity: value.quantity}],
       acceptedTerms: value.acceptedTerms,

@@ -27,7 +27,7 @@ test.describe('Checkout público e pagamento Pix', () => {
     expect(pixCode.trim().length).toBeGreaterThan(30);
   });
 
-  test('o CPF é obrigatório quando o evento exige documento', async ({page, scenarioData}) => {
+  test('o CPF é obrigatório no checkout público', async ({page, scenarioData}) => {
     await page.goto(`/e/${scenarioData.event.slug}`);
 
     await page.locator('#checkout-name').fill(scenario.buyer.name);
