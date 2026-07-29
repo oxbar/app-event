@@ -120,19 +120,19 @@ public class AdminResourceController {
 
     @GetMapping(value = "/events/{eventId}/reports/sales.xlsx", produces = XLSX)
     ResponseEntity<byte[]> salesWorkbook(@AuthenticationPrincipal AppPrincipal principal, @PathVariable UUID eventId) {
-        return xlsx(reports.fileName("vendas", principal, eventId), reports.salesWorkbook(principal, eventId));
+        return xlsx(reports.exportSales(principal, eventId));
     }
 
     @GetMapping(value = "/events/{eventId}/reports/checkins.xlsx", produces = XLSX)
     ResponseEntity<byte[]> checkinsWorkbook(@AuthenticationPrincipal AppPrincipal principal,
                                             @PathVariable UUID eventId) {
-        return xlsx(reports.fileName("entradas", principal, eventId), reports.checkinsWorkbook(principal, eventId));
+        return xlsx(reports.exportCheckins(principal, eventId));
     }
 
     /** Pasta de trabalho completa: resumo, vendas, ingressos e entradas. */
     @GetMapping(value = "/events/{eventId}/reports/workbook.xlsx", produces = XLSX)
     ResponseEntity<byte[]> fullWorkbook(@AuthenticationPrincipal AppPrincipal principal, @PathVariable UUID eventId) {
-        return xlsx(reports.fileName("relatorio", principal, eventId), reports.fullWorkbook(principal, eventId));
+        return xlsx(reports.exportFull(principal, eventId));
     }
 
     private ResponseEntity<String> csv(String name, String body) {
@@ -142,9 +142,10 @@ public class AdminResourceController {
                 .body(body);
     }
 
-    private ResponseEntity<byte[]> xlsx(String name, byte[] body) {
+    private ResponseEntity<byte[]> xlsx(ReportService.ExportedFile file) {
+        byte[] body = file.content();
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + name + "\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.filename() + "\"")
                 .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(body.length))
                 .contentType(MediaType.parseMediaType(XLSX))
                 .body(body);

@@ -29,6 +29,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -152,9 +154,13 @@ class ReportServiceTest {
     }
 
     @Test
-    @DisplayName("a pasta completa traz as quatro abas na ordem de leitura")
+    @DisplayName("a pasta completa gera nome e conteúdo numa única leitura do evento")
     void fullWorkbookHasAllSheets() throws IOException {
-        try (Workbook workbook = open(service.fullWorkbook(principal, event.getId()))) {
+        ReportService.ExportedFile exported = service.exportFull(principal, event.getId());
+
+        assertThat(exported.filename()).startsWith("relatorio-festival-aurora-").endsWith(".xlsx");
+        verify(events, times(1)).findByIdAndOrganizationId(event.getId(), ORGANIZATION_ID);
+        try (Workbook workbook = open(exported.content())) {
             assertThat(sheetNames(workbook)).containsExactly("Resumo", "Vendas", "Ingressos", "Entradas");
         }
     }

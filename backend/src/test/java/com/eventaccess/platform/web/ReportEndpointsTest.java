@@ -62,8 +62,8 @@ class ReportEndpointsTest {
     @Test
     @DisplayName("a pasta completa vem com MIME de XLSX e nome de arquivo")
     void fullWorkbookIsDownloadable() throws Exception {
-        when(reports.fullWorkbook(any(), any())).thenReturn(new byte[]{1, 2, 3, 4});
-        when(reports.fileName(any(), any(), any())).thenReturn("relatorio-festival-aurora-20260815-2200.xlsx");
+        when(reports.exportFull(any(), any())).thenReturn(new ReportService.ExportedFile(
+                "relatorio-festival-aurora-20260815-2200.xlsx", new byte[]{1, 2, 3, 4}));
 
         mvc.perform(get("/api/events/{id}/reports/workbook.xlsx", EVENT_ID))
                 .andExpect(status().isOk())
@@ -75,9 +75,10 @@ class ReportEndpointsTest {
     @Test
     @DisplayName("vendas e entradas também exportam em planilha")
     void perTopicWorkbooks() throws Exception {
-        when(reports.salesWorkbook(any(), any())).thenReturn(new byte[]{1});
-        when(reports.checkinsWorkbook(any(), any())).thenReturn(new byte[]{2});
-        when(reports.fileName(any(), any(), any())).thenReturn("planilha.xlsx");
+        when(reports.exportSales(any(), any()))
+                .thenReturn(new ReportService.ExportedFile("vendas.xlsx", new byte[]{1}));
+        when(reports.exportCheckins(any(), any()))
+                .thenReturn(new ReportService.ExportedFile("entradas.xlsx", new byte[]{2}));
 
         mvc.perform(get("/api/events/{id}/reports/sales.xlsx", EVENT_ID))
                 .andExpect(status().isOk())

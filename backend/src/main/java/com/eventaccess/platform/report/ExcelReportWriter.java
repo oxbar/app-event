@@ -196,7 +196,13 @@ public final class ExcelReportWriter implements AutoCloseable {
         public SheetWriter row(Value... values) {
             Row row = sheet.createRow(rowIndex++);
             for (int column = 0; column < values.length; column++) {
-                values[column].write(row, column, zebra);
+                Value value = values[column];
+                if (value == null) {
+                    // Uma coluna opcional nunca deve derrubar toda a exportação.
+                    cell(row, column, "", zebra ? textZebraStyle : textStyle);
+                } else {
+                    value.write(row, column, zebra);
+                }
             }
             zebra = !zebra;
             return this;

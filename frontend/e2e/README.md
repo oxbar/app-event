@@ -39,12 +39,18 @@ O caminho Asaas continua coberto: é o roteiro manual de homologação, com
 ## Rodar
 
 ```bash
+npm run e2e:full              # recria a stack com .env.e2e (FAKE), valida e executa tudo
 npm run e2e                   # tudo
 npm run e2e -- 05-door        # só a portaria
 npm run e2e:ui                # modo interativo
 npm run e2e:report            # relatório HTML da última execução
 npm run lint:e2e              # só checagem de tipos, sem navegador
 ```
+
+`e2e:full` é o comando seguro para homologação completa: ele força a reconstrução
+com `PAYMENT_PROVIDER=FAKE` e interrompe antes dos cenários caso a imagem ainda
+esteja em Asaas ou fora do ambiente de desenvolvimento. Isso evita que uma falha
+de configuração apareça como dezenas de timeouts no checkout.
 
 Por padrão, tanto o navegador quanto o cliente auxiliar da suíte usam
 `http://localhost:4200`. As chamadas `/api` passam pelo proxy do Angular/Nginx.

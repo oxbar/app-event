@@ -61,48 +61,74 @@ public class ReportService {
 
     @Transactional(readOnly = true)
     public byte[] salesWorkbook(AppPrincipal principal, UUID eventId) {
-        Event event = requireEvent(principal, eventId);
-        List<Order> eventOrders = orders.findByEventId(eventId);
-        List<Ticket> eventTickets = ticketsOf(principal, eventId);
-        try (ExcelReportWriter writer = new ExcelReportWriter(zoneOf(event))) {
-            writeSales(writer, event, eventOrders, eventTickets);
-            return writer.toByteArray();
-        }
+        return exportSales(principal, eventId).content();
     }
 
     @Transactional(readOnly = true)
     public byte[] checkinsWorkbook(AppPrincipal principal, UUID eventId) {
-        Event event = requireEvent(principal, eventId);
-        try (ExcelReportWriter writer = new ExcelReportWriter(zoneOf(event))) {
-            writeCheckins(writer, event, checkins.findByEventIdOrderByScannedAtDesc(eventId));
-            return writer.toByteArray();
-        }
+        return exportCheckins(principal, eventId).content();
     }
 
     /** Pasta de trabalho completa: resumo, vendas, ingressos e entradas. */
     @Transactional(readOnly = true)
     public byte[] fullWorkbook(AppPrincipal principal, UUID eventId) {
+        return exportFull(principal, eventId).content();
+    }
+
+    /**
+     * Gera nome e conteúdo no mesmo contexto transacional.
+     *
+     * <p>O nome usa o fuso da organização, que é uma associação LAZY do evento.
+     * Separar {@code fileName()} da geração fazia o controller acessar essa
+     * associação depois que a sessão JPA já havia sido fechada.</p>
+     */
+    @Transactional(readOnly = true)
+    public ExportedFile exportSales(AppPrincipal principal, UUID eventId) {
         Event event = requireEvent(principal, eventId);
+        ZoneId zone = zoneOf(event);
+        List<Order> eventOrders = orders.findByEventId(eventId);
+        List<Ticket> eventTickets = ticketsOf(principal, eventId);
+        try (ExcelReportWriter writer = new ExcelReportWriter(zone)) {
+            writeSales(writer, event, eventOrders, eventTickets);
+            return exported("vendas", event, zone, writer.toByteArray());
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public ExportedFile exportCheckins(AppPrincipal principal, UUID eventId) {
+        Event event = requireEvent(principal, eventId);
+        ZoneId zone = zoneOf(event);
+        try (ExcelReportWriter writer = new ExcelReportWriter(zone)) {
+            writeCheckins(writer, event, checkins.findByEventIdOrderByScannedAtDesc(eventId));
+            return exported("entradas", event, zone, writer.toByteArray());
+        }
+    }
+
+    /** Pasta de trabalho completa: resumo, vendas, ingressos e entradas. */
+    @Transactional(readOnly = true)
+    public ExportedFile exportFull(AppPrincipal principal, UUID eventId) {
+        Event event = requireEvent(principal, eventId);
+        ZoneId zone = zoneOf(event);
         List<Order> eventOrders = orders.findByEventId(eventId);
         List<Ticket> eventTickets = ticketsOf(principal, eventId);
         List<TicketType> types = ticketTypes.findByEventIdOrderBySortOrderAsc(eventId);
         List<Checkin> eventCheckins = checkins.findByEventIdOrderByScannedAtDesc(eventId);
         ReportSummary summary = buildSummary(event, eventOrders, eventTickets, types, eventCheckins);
 
-        try (ExcelReportWriter writer = new ExcelReportWriter(zoneOf(event))) {
-            writeSummary(writer, event, summary);
+        try (ExcelReportWriter writer = new ExcelReportWriter(zone)) {
+            writeSummary(writer, event, summary, zone);
             writeSales(writer, event, eventOrders, eventTickets);
             writeTickets(writer, event, eventTickets);
             writeCheckins(writer, event, eventCheckins);
-            return writer.toByteArray();
+            return exported("relatorio", event, zone, writer.toByteArray());
         }
     }
 
+    /** Mantido para compatibilidade; o controller usa os métodos export* acima. */
+    @Transactional(readOnly = true)
     public String fileName(String prefix, AppPrincipal principal, UUID eventId) {
         Event event = requireEvent(principal, eventId);
-        String slug = event.getSlug() == null || event.getSlug().isBlank()
-                ? event.getId().toString() : event.getSlug();
-        return "%s-%s-%s.xlsx".formatted(prefix, slug, OffsetDateTime.now(zoneOf(event)).format(FILE_STAMP));
+        return fileName(prefix, event, zoneOf(event));
     }
 
     // ------------------------------------------------------------------ dados
@@ -159,8 +185,7 @@ public class ReportService {
 
     // ------------------------------------------------------------------- abas
 
-    private void writeSummary(ExcelReportWriter writer, Event event, ReportSummary summary) {
-        ZoneId zone = zoneOf(event);
+    private void writeSummary(ExcelReportWriter writer, Event event, ReportSummary summary, ZoneId zone) {
         ExcelReportWriter.SheetWriter sheet = writer.sheet("Resumo", summary.eventName(),
                 "Gerado em " + summary.generatedAt().atZoneSameInstant(zone).format(HUMAN)
                         + " (" + zone.getId() + ")");
@@ -311,6 +336,16 @@ public class ReportService {
         return ZoneId.systemDefault();
     }
 
+    private ExportedFile exported(String prefix, Event event, ZoneId zone, byte[] content) {
+        return new ExportedFile(fileName(prefix, event, zone), content);
+    }
+
+    private String fileName(String prefix, Event event, ZoneId zone) {
+        String slug = event.getSlug() == null || event.getSlug().isBlank()
+                ? event.getId().toString() : event.getSlug();
+        return "%s-%s-%s.xlsx".formatted(prefix, slug, OffsetDateTime.now(zone).format(FILE_STAMP));
+    }
+
     private static String currency(List<Order> eventOrders) {
         return eventOrders.stream().map(Order::getCurrency).filter(Objects::nonNull).findFirst().orElse("BRL");
     }
@@ -326,5 +361,12 @@ public class ReportService {
     private static double ratio(long part, long total) {
         if (total <= 0) return 0d;
         return BigDecimal.valueOf(part).divide(BigDecimal.valueOf(total), 4, RoundingMode.HALF_UP).doubleValue();
+    }
+
+    public record ExportedFile(String filename, byte[] content) {
+        public ExportedFile {
+            Objects.requireNonNull(filename, "filename");
+            Objects.requireNonNull(content, "content");
+        }
     }
 }
