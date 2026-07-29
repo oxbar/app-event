@@ -82,6 +82,8 @@ jobs:
         uses: aquasecurity/tfsec-action@v1.0.3
         with:
           working_directory: infrastructure/terraform
+          version: v1.28.14
+          github_token: ${{ github.token }}
 
   plan:
     name: plan (${{ matrix.environment }})
